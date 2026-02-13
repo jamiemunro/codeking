@@ -34,7 +34,8 @@ export default function Sessions() {
 
   // Browser tab title when sessions are idle
   useEffect(() => {
-    document.title = idleSessions.size > 0 ? "(!) Superposition" : "Superposition";
+    document.title =
+      idleSessions.size > 0 ? "(!) Superposition" : "Superposition";
   }, [idleSessions]);
 
   // OS notifications for idle sessions
@@ -48,7 +49,10 @@ export default function Sessions() {
         ? `${session.repo_name}/${session.branch}`
         : sessionId;
 
-      if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+      if (
+        typeof Notification !== "undefined" &&
+        Notification.permission === "granted"
+      ) {
         const n = new Notification("Superposition", {
           body: `${label} needs your attention`,
         });
@@ -56,7 +60,10 @@ export default function Sessions() {
           window.focus();
           setActiveTab(sessionId);
         };
-      } else if (typeof Notification !== "undefined" && Notification.permission === "default") {
+      } else if (
+        typeof Notification !== "undefined" &&
+        Notification.permission === "default"
+      ) {
         Notification.requestPermission();
       }
     }
