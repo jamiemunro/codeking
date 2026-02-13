@@ -1,0 +1,70 @@
+import { useEffect, useState } from "react";
+import { api } from "../lib/api";
+import { useToast } from "../components/Toast";
+
+export default function Settings() {
+  const [pat, setPat] = useState("");
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    api
+      .getSetting("github_pat")
+      .then((s) => setPat(s.value))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const handleSave = async () => {
+    try {
+      if (pat.trim()) {
+        await api.putSetting("github_pat", pat.trim());
+      } else {
+        await api.deleteSetting("github_pat").catch(() => {});
+      }
+      toast("Settings saved", "success");
+    } catch (e: any) {
+      toast(e.message, "error");
+    }
+  };
+
+  return (
+    <div className="p-8 max-w-2xl">
+      <h2 className="text-2xl font-bold mb-1">Settings</h2>
+      <p className="text-zinc-400 mb-8">Configure your GitHub access and preferences.</p>
+
+      <div className="space-y-6">
+        <div>
+          <label className="block text-sm font-medium mb-2">
+            GitHub Personal Access Token
+          </label>
+          <p className="text-xs text-zinc-500 mb-3">
+            Required for accessing private repositories. Create a token at{" "}
+            <a
+              href="https://github.com/settings/tokens"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-400 hover:underline"
+            >
+              github.com/settings/tokens
+            </a>{" "}
+            with <code className="text-zinc-400">repo</code> scope.
+          </p>
+          <input
+            type="password"
+            value={pat}
+            onChange={(e) => setPat(e.target.value)}
+            placeholder={loading ? "Loading..." : "ghp_xxxxxxxxxxxxxxxxxxxx"}
+            className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-md text-sm placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+          />
+        </div>
+        <button
+          onClick={handleSave}
+          className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-md transition-colors"
+        >
+          Save
+        </button>
+      </div>
+    </div>
+  );
+}

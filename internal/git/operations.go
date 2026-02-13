@@ -1,0 +1,130 @@
+package git
+
+import (
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+
+	"github.com/peterje/superposition/internal/db"
+)
+
+func ReposDir() (string, error) {
+	dataDir, err := db.DataDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(dataDir, "repos"), nil
+}
+
+func WorktreesDir() (string, error) {
+	dataDir, err := db.DataDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(dataDir, "worktrees"), nil
+}
+
+// CloneBare clones a repo as a bare repository.
+// For private repos, the PAT is embedded in the URL.
+func CloneBare(cloneURL, pat, owner, name string) (string, error) {
+	reposDir, err := ReposDir()
+	if err != nil {
+		return "", err
+	}
+
+	destDir := filepath.Join(reposDir, owner)
+	if err := os.MkdirAll(destDir, 0755); err != nil {
+		return "", fmt.Errorf("create repos dir: %w", err)
+	}
+
+	localPath := filepath.Join(destDir, name+".git")
+
+	// If already exists, just fetch
+	if _, err := os.Stat(localPath); err == nil {
+		return localPath, Fetch(localPath, pat)
+	}
+
+	authURL := cloneURL
+	if pat != "" {
+		authURL = strings.Replace(cloneURL, "https://", "https://x-access-token:"+pat+"@", 1)
+	}
+
+	cmd := exec.Command("git", "clone", "--bare", authURL, localPath)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return "", fmt.Errorf("git clone: %s: %w", string(out), err)
+	}
+
+	return localPath, nil
+}
+
+func Fetch(barePath, pat string) error {
+	cmd := exec.Command("git", "-C", barePath, "fetch", "--all", "--prune")
+	if pat != "" {
+		cmd.Env = append(os.Environ(),
+			fmt.Sprintf("GIT_ASKPASS=echo"),
+			fmt.Sprintf("GIT_TERMINAL_PROMPT=0"),
+		)
+		// Set the remote URL with auth for fetch
+		setURL := exec.Command("git", "-C", barePath, "remote", "set-url", "origin",
+			getAuthURL(barePath, pat))
+		setURL.Run() // best effort
+	}
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("git fetch: %s: %w", string(out), err)
+	}
+	return nil
+}
+
+func getAuthURL(barePath, pat string) string {
+	cmd := exec.Command("git", "-C", barePath, "remote", "get-url", "origin")
+	out, err := cmd.Output()
+	if err != nil {
+		return ""
+	}
+	url := strings.TrimSpace(string(out))
+	// Strip any existing credentials
+	url = strings.Replace(url, "x-access-token:"+pat+"@", "", 1)
+	// Re-add our token
+	if pat != "" {
+		url = strings.Replace(url, "https://", "https://x-access-token:"+pat+"@", 1)
+	}
+	return url
+}
+
+func AddWorktree(barePath, worktreePath, branch string) error {
+	if err := os.MkdirAll(filepath.Dir(worktreePath), 0755); err != nil {
+		return fmt.Errorf("create worktree parent: %w", err)
+	}
+
+	cmd := exec.Command("git", "-C", barePath, "worktree", "add", worktreePath, branch)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("git worktree add: %s: %w", string(out), err)
+	}
+	return nil
+}
+
+func RemoveWorktree(barePath, worktreePath string) error {
+	cmd := exec.Command("git", "-C", barePath, "worktree", "remove", "--force", worktreePath)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("git worktree remove: %s: %w", string(out), err)
+	}
+	return nil
+}
+
+func ListBranches(barePath string) ([]string, error) {
+	cmd := exec.Command("git", "-C", barePath, "branch", "--format=%(refname:short)")
+	out, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("git branch: %w", err)
+	}
+
+	var branches []string
+	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+		if line != "" {
+			branches = append(branches, line)
+		}
+	}
+	return branches, nil
+}
