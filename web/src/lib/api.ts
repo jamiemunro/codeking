@@ -51,7 +51,12 @@ export const api = {
 
   // Sessions
   getSessions: () => request<any[]>("/api/sessions"),
-  createSession: (repoId: number, sourceBranch: string, newBranch: string, cliType: string) =>
+  createSession: (
+    repoId: number,
+    sourceBranch: string,
+    newBranch: string,
+    cliType: string,
+  ) =>
     request<any>("/api/sessions", {
       method: "POST",
       body: JSON.stringify({

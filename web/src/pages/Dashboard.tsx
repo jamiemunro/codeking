@@ -45,9 +45,7 @@ export default function Dashboard() {
                 label={cli.name}
                 ok={cli.installed}
                 detail={
-                  !cli.installed
-                    ? "Not installed"
-                    : cli.path || "Installed"
+                  !cli.installed ? "Not installed" : cli.path || "Installed"
                 }
               />
             ))}
@@ -58,14 +56,24 @@ export default function Dashboard() {
   );
 }
 
-function StatusCard({ label, ok, detail }: { label: string; ok: boolean; detail: string }) {
+function StatusCard({
+  label,
+  ok,
+  detail,
+}: {
+  label: string;
+  ok: boolean;
+  detail: string;
+}) {
   return (
     <div className="flex items-center justify-between p-4 rounded-lg border border-zinc-800 bg-zinc-900">
       <div>
         <p className="font-medium capitalize">{label}</p>
         <p className="text-sm text-zinc-500">{detail}</p>
       </div>
-      <div className={`w-3 h-3 rounded-full ${ok ? "bg-emerald-500" : "bg-amber-500"}`} />
+      <div
+        className={`w-3 h-3 rounded-full ${ok ? "bg-emerald-500" : "bg-amber-500"}`}
+      />
     </div>
   );
 }

@@ -41,22 +41,19 @@ export default function Repositories() {
     return () => clearInterval(interval);
   }, [loadLocal]);
 
-  const searchGitHub = useCallback(
-    async (query: string, refresh?: boolean) => {
-      setLoading(true);
-      setError("");
-      try {
-        const repos = await api.getGitHubRepos(query || undefined, refresh);
-        setGhRepos(repos || []);
-        setHasLoaded(true);
-      } catch (e: any) {
-        setError(e.message);
-      } finally {
-        setLoading(false);
-      }
-    },
-    [],
-  );
+  const searchGitHub = useCallback(async (query: string, refresh?: boolean) => {
+    setLoading(true);
+    setError("");
+    try {
+      const repos = await api.getGitHubRepos(query || undefined, refresh);
+      setGhRepos(repos || []);
+      setHasLoaded(true);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   // Load all repos on mount
   useEffect(() => {

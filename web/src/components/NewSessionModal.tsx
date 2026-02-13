@@ -86,7 +86,9 @@ export default function NewSessionModal({ open, onClose, onCreated }: Props) {
           <div>
             <label className="block text-sm font-medium mb-1">Repository</label>
             {repos.length === 0 ? (
-              <p className="text-sm text-zinc-500">No repos available. Add one first.</p>
+              <p className="text-sm text-zinc-500">
+                No repos available. Add one first.
+              </p>
             ) : (
               <select
                 value={repoId ?? ""}
@@ -103,7 +105,9 @@ export default function NewSessionModal({ open, onClose, onCreated }: Props) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Source Branch</label>
+            <label className="block text-sm font-medium mb-1">
+              Source Branch
+            </label>
             <select
               value={sourceBranch}
               onChange={(e) => setSourceBranch(e.target.value)}
@@ -121,7 +125,9 @@ export default function NewSessionModal({ open, onClose, onCreated }: Props) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">New Branch Name</label>
+            <label className="block text-sm font-medium mb-1">
+              New Branch Name
+            </label>
             <input
               type="text"
               value={newBranch}

@@ -46,7 +46,9 @@ export default function Sessions() {
     setOpenTabs((prev) => prev.filter((t) => t !== id));
     if (activeTab === id) {
       const remaining = openTabs.filter((t) => t !== id);
-      setActiveTab(remaining.length > 0 ? remaining[remaining.length - 1] : null);
+      setActiveTab(
+        remaining.length > 0 ? remaining[remaining.length - 1] : null,
+      );
     }
   };
 
@@ -56,7 +58,7 @@ export default function Sessions() {
       ? `${session.repo_owner}/${session.repo_name} (${session.branch})`
       : id;
     const deleteLocal = window.confirm(
-      `Also delete the local branch/worktree for ${target}?\n\nOK = delete locally\nCancel = keep local files and branch`
+      `Also delete the local branch/worktree for ${target}?\n\nOK = delete locally\nCancel = keep local files and branch`,
     );
 
     await api.deleteSession(id, deleteLocal);
@@ -89,7 +91,9 @@ export default function Sessions() {
               <div
                 key={id}
                 className={`flex items-center gap-1 shrink-0 border-r border-zinc-800 ${
-                  isActive ? "bg-zinc-950" : "bg-zinc-900/50 hover:bg-zinc-800/50"
+                  isActive
+                    ? "bg-zinc-950"
+                    : "bg-zinc-900/50 hover:bg-zinc-800/50"
                 }`}
               >
                 <button

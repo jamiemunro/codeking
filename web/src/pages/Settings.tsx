@@ -31,7 +31,9 @@ export default function Settings() {
   return (
     <div className="p-8 max-w-2xl">
       <h2 className="text-2xl font-bold mb-1">Settings</h2>
-      <p className="text-zinc-400 mb-8">Configure your GitHub access and preferences.</p>
+      <p className="text-zinc-400 mb-8">
+        Configure your GitHub access and preferences.
+      </p>
 
       <div className="space-y-6">
         <div>
@@ -48,9 +50,9 @@ export default function Settings() {
             >
               classic token
             </a>{" "}
-            with <code className="text-zinc-400">repo</code> scope.
-            Fine-grained tokens only cover a single account or org — a classic
-            token is needed to access repos across all your orgs.
+            with <code className="text-zinc-400">repo</code> scope. Fine-grained
+            tokens only cover a single account or org — a classic token is
+            needed to access repos across all your orgs.
           </p>
           <input
             type="password"

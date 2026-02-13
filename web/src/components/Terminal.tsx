@@ -191,8 +191,7 @@ export default function Terminal({ sessionId, visible = true }: TerminalProps) {
     const term = new XTerm({
       cursorBlink: true,
       fontSize: 14,
-      fontFamily:
-        "'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace",
+      fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace",
       theme: {
         background: "#09090b",
         foreground: "#fafafa",

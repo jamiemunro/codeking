@@ -1,0 +1,50 @@
+name: Web Quality
+
+on:
+  pull_request:
+    paths:
+      - "web/**"
+      - ".github/workflows/web-quality.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "web/**"
+      - ".github/workflows/web-quality.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: web-quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  web-style-and-lint:
+    name: Web Style + Lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check formatting
+        run: npm run format:check
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Run TypeScript typecheck
+        run: npm run typecheck
