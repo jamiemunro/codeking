@@ -16,12 +16,16 @@ import (
 )
 
 type ReposHandler struct {
-	db *sql.DB
+	db          *sql.DB
+	cachedRepos []github.Repo
+	cachedAt    time.Time
 }
 
 func NewReposHandler(db *sql.DB) *ReposHandler {
 	return &ReposHandler{db: db}
 }
+
+const repoCacheTTL = 5 * time.Minute
 
 func (h *ReposHandler) HandleGitHubRepos(w http.ResponseWriter, r *http.Request) {
 	pat := h.getPAT()
@@ -30,13 +34,34 @@ func (h *ReposHandler) HandleGitHubRepos(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	repos, err := github.ListRepos(pat)
-	if err != nil {
-		WriteError(w, http.StatusInternalServerError, err.Error())
+	refresh := r.URL.Query().Get("refresh") == "true"
+
+	// Fetch and cache all repos if cache is empty, stale, or refresh requested
+	if h.cachedRepos == nil || refresh || time.Since(h.cachedAt) > repoCacheTTL {
+		repos, err := github.ListAllRepos(pat)
+		if err != nil {
+			WriteError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		h.cachedRepos = repos
+		h.cachedAt = time.Now()
+	}
+
+	// Filter by search query client-side
+	query := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("q")))
+	if query == "" {
+		WriteJSON(w, http.StatusOK, h.cachedRepos)
 		return
 	}
 
-	WriteJSON(w, http.StatusOK, repos)
+	filtered := []github.Repo{}
+	for _, r := range h.cachedRepos {
+		if strings.Contains(strings.ToLower(r.FullName), query) ||
+			strings.Contains(strings.ToLower(r.Description), query) {
+			filtered = append(filtered, r)
+		}
+	}
+	WriteJSON(w, http.StatusOK, filtered)
 }
 
 func (h *ReposHandler) HandleList(w http.ResponseWriter, _ *http.Request) {

@@ -18,7 +18,8 @@ interface Props {
 export default function NewSessionModal({ open, onClose, onCreated }: Props) {
   const [repos, setRepos] = useState<Repo[]>([]);
   const [repoId, setRepoId] = useState<number | null>(null);
-  const [branch, setBranch] = useState("");
+  const [sourceBranch, setSourceBranch] = useState("");
+  const [newBranch, setNewBranch] = useState("");
   const [branches, setBranches] = useState<string[]>([]);
   const [cliType, setCliType] = useState<"claude" | "codex">("claude");
   const [loading, setLoading] = useState(false);
@@ -41,7 +42,9 @@ export default function NewSessionModal({ open, onClose, onCreated }: Props) {
       api.getRepoBranches(repoId).then((b) => {
         setBranches(b);
         const repo = repos.find((r) => r.id === repoId);
-        setBranch(repo?.default_branch || b[0] || "main");
+        const defaultBranch = repo?.default_branch || b[0] || "main";
+        setSourceBranch(defaultBranch);
+        setNewBranch("");
       });
     }
   }, [repoId]);
@@ -49,11 +52,16 @@ export default function NewSessionModal({ open, onClose, onCreated }: Props) {
   if (!open) return null;
 
   const handleSubmit = async () => {
-    if (!repoId || !branch) return;
+    if (!repoId || !sourceBranch || !newBranch.trim()) return;
     setLoading(true);
     setError("");
     try {
-      const session = await api.createSession(repoId, branch, cliType);
+      const session = await api.createSession(
+        repoId,
+        sourceBranch,
+        newBranch.trim(),
+        cliType,
+      );
       onCreated(session);
       onClose();
     } catch (e: any) {
@@ -95,10 +103,10 @@ export default function NewSessionModal({ open, onClose, onCreated }: Props) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Branch</label>
+            <label className="block text-sm font-medium mb-1">Source Branch</label>
             <select
-              value={branch}
-              onChange={(e) => setBranch(e.target.value)}
+              value={sourceBranch}
+              onChange={(e) => setSourceBranch(e.target.value)}
               className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-md text-sm"
             >
               {branches.map((b) => (
@@ -107,6 +115,20 @@ export default function NewSessionModal({ open, onClose, onCreated }: Props) {
                 </option>
               ))}
             </select>
+            <p className="text-xs text-zinc-500 mt-1">
+              The branch to base your new branch on.
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">New Branch Name</label>
+            <input
+              type="text"
+              value={newBranch}
+              onChange={(e) => setNewBranch(e.target.value)}
+              placeholder="e.g. feat/add-login-page"
+              className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-md text-sm placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
           </div>
 
           <div>
@@ -138,7 +160,7 @@ export default function NewSessionModal({ open, onClose, onCreated }: Props) {
           </button>
           <button
             onClick={handleSubmit}
-            disabled={loading || !repoId || !branch}
+            disabled={loading || !repoId || !sourceBranch || !newBranch.trim()}
             className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-md transition-colors disabled:opacity-50"
           >
             {loading ? "Creating..." : "Create Session"}

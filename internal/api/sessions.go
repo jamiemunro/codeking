@@ -53,9 +53,10 @@ func (h *SessionsHandler) HandleList(w http.ResponseWriter, _ *http.Request) {
 
 func (h *SessionsHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 	var body struct {
-		RepoID  int64  `json:"repo_id"`
-		Branch  string `json:"branch"`
-		CLIType string `json:"cli_type"`
+		RepoID       int64  `json:"repo_id"`
+		SourceBranch string `json:"source_branch"`
+		NewBranch    string `json:"new_branch"`
+		CLIType      string `json:"cli_type"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		WriteError(w, http.StatusBadRequest, "invalid JSON")
@@ -64,6 +65,14 @@ func (h *SessionsHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 
 	if body.CLIType != "claude" && body.CLIType != "codex" {
 		WriteError(w, http.StatusBadRequest, "cli_type must be 'claude' or 'codex'")
+		return
+	}
+	if body.SourceBranch == "" {
+		WriteError(w, http.StatusBadRequest, "source_branch is required")
+		return
+	}
+	if body.NewBranch == "" {
+		WriteError(w, http.StatusBadRequest, "new_branch is required")
 		return
 	}
 
@@ -89,7 +98,7 @@ func (h *SessionsHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 	}
 	worktreePath := filepath.Join(wtDir, sessionID)
 
-	if err := git.AddWorktree(repo.LocalPath, worktreePath, body.Branch); err != nil {
+	if err := git.AddWorktree(repo.LocalPath, worktreePath, body.NewBranch, body.SourceBranch); err != nil {
 		WriteError(w, http.StatusInternalServerError, fmt.Sprintf("create worktree: %v", err))
 		return
 	}
@@ -106,7 +115,7 @@ func (h *SessionsHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 	now := time.Now()
 	h.db.Exec(`INSERT INTO sessions (id, repo_id, worktree_path, branch, cli_type, status, pid, created_at)
 		VALUES (?, ?, ?, ?, ?, 'running', ?, ?)`,
-		sessionID, body.RepoID, worktreePath, body.Branch, body.CLIType, pid, now)
+		sessionID, body.RepoID, worktreePath, body.NewBranch, body.CLIType, pid, now)
 
 	// Monitor for process exit and update DB
 	go func() {
@@ -119,7 +128,7 @@ func (h *SessionsHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 		ID:           sessionID,
 		RepoID:       body.RepoID,
 		WorktreePath: worktreePath,
-		Branch:       body.Branch,
+		Branch:       body.NewBranch,
 		CLIType:      body.CLIType,
 		Status:       "running",
 		PID:          &pid,

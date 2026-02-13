@@ -39,16 +39,18 @@ export default function Settings() {
             GitHub Personal Access Token
           </label>
           <p className="text-xs text-zinc-500 mb-3">
-            Required for accessing private repositories. Create a token at{" "}
+            Required for accessing repositories. Use a{" "}
             <a
               href="https://github.com/settings/tokens"
               target="_blank"
               rel="noopener noreferrer"
               className="text-blue-400 hover:underline"
             >
-              github.com/settings/tokens
+              classic token
             </a>{" "}
             with <code className="text-zinc-400">repo</code> scope.
+            Fine-grained tokens only cover a single account or org — a classic
+            token is needed to access repos across all your orgs.
           </p>
           <input
             type="password"

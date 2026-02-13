@@ -27,7 +27,13 @@ export const api = {
     request<void>(`/api/settings/${key}`, { method: "DELETE" }),
 
   // GitHub repos
-  getGitHubRepos: () => request<any[]>("/api/github/repos"),
+  getGitHubRepos: (query?: string, refresh?: boolean) => {
+    const params = new URLSearchParams();
+    if (query) params.set("q", query);
+    if (refresh) params.set("refresh", "true");
+    const qs = params.toString();
+    return request<any[]>(`/api/github/repos${qs ? `?${qs}` : ""}`);
+  },
 
   // Repos
   getRepos: () => request<any[]>("/api/repos"),
@@ -45,10 +51,15 @@ export const api = {
 
   // Sessions
   getSessions: () => request<any[]>("/api/sessions"),
-  createSession: (repoId: number, branch: string, cliType: string) =>
+  createSession: (repoId: number, sourceBranch: string, newBranch: string, cliType: string) =>
     request<any>("/api/sessions", {
       method: "POST",
-      body: JSON.stringify({ repo_id: repoId, branch, cli_type: cliType }),
+      body: JSON.stringify({
+        repo_id: repoId,
+        source_branch: sourceBranch,
+        new_branch: newBranch,
+        cli_type: cliType,
+      }),
     }),
   deleteSession: (id: string) =>
     request<void>(`/api/sessions/${id}`, { method: "DELETE" }),

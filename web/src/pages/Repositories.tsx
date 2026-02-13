@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { api } from "../lib/api";
 
 interface LocalRepo {
@@ -28,6 +28,8 @@ export default function Repositories() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
+  const [hasLoaded, setHasLoaded] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const loadLocal = useCallback(() => {
     api.getRepos().then(setLocalRepos).catch(console.error);
@@ -39,18 +41,37 @@ export default function Repositories() {
     return () => clearInterval(interval);
   }, [loadLocal]);
 
-  const loadGitHub = async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const repos = await api.getGitHubRepos();
-      setGhRepos(repos);
-    } catch (e: any) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const searchGitHub = useCallback(
+    async (query: string, refresh?: boolean) => {
+      setLoading(true);
+      setError("");
+      try {
+        const repos = await api.getGitHubRepos(query || undefined, refresh);
+        setGhRepos(repos || []);
+        setHasLoaded(true);
+      } catch (e: any) {
+        setError(e.message);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [],
+  );
+
+  // Load all repos on mount
+  useEffect(() => {
+    searchGitHub("");
+  }, [searchGitHub]);
+
+  // Debounced search when typing
+  useEffect(() => {
+    if (!hasLoaded) return;
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      searchGitHub(search);
+    }, 300);
+    return () => clearTimeout(debounceRef.current);
+  }, [search, hasLoaded, searchGitHub]);
 
   const addRepo = async (url: string) => {
     try {
@@ -72,11 +93,7 @@ export default function Repositories() {
   };
 
   const localFullNames = new Set(localRepos.map((r) => `${r.owner}/${r.name}`));
-  const filteredGh = ghRepos.filter(
-    (r) =>
-      !localFullNames.has(r.full_name) &&
-      r.full_name.toLowerCase().includes(search.toLowerCase()),
-  );
+  const filteredGh = ghRepos.filter((r) => !localFullNames.has(r.full_name));
 
   return (
     <div className="p-8 max-w-4xl">
@@ -98,7 +115,7 @@ export default function Repositories() {
         </h3>
         {localRepos.length === 0 ? (
           <p className="text-zinc-500 text-sm">
-            No repositories added yet. Browse GitHub repos below.
+            No repositories added yet. Search GitHub repos below.
           </p>
         ) : (
           <div className="space-y-2">
@@ -151,23 +168,28 @@ export default function Repositories() {
             GitHub Repositories
           </h3>
           <button
-            onClick={loadGitHub}
+            onClick={() => searchGitHub(search, true)}
             disabled={loading}
-            className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-sm rounded-md transition-colors disabled:opacity-50"
+            className="text-xs text-zinc-400 hover:text-white px-2 py-1 rounded border border-zinc-700 hover:border-zinc-600 transition-colors disabled:opacity-50"
           >
-            {loading ? "Loading..." : ghRepos.length > 0 ? "Refresh" : "Load Repos"}
+            Refresh
           </button>
         </div>
 
-        {ghRepos.length > 0 && (
+        <div className="relative mb-3">
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Filter repos..."
-            className="w-full mb-3 px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-md text-sm placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            placeholder="Search your GitHub repos..."
+            className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-md text-sm placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
-        )}
+          {loading && (
+            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+              <div className="w-4 h-4 border-2 border-zinc-600 border-t-zinc-300 rounded-full animate-spin" />
+            </div>
+          )}
+        </div>
 
         <div className="space-y-2 max-h-96 overflow-auto">
           {filteredGh.map((repo) => (
@@ -198,6 +220,13 @@ export default function Repositories() {
               </div>
             </div>
           ))}
+          {!loading && hasLoaded && filteredGh.length === 0 && (
+            <p className="text-zinc-500 text-sm py-4 text-center">
+              {search
+                ? "No repos found. Try a different search."
+                : "No repos to show."}
+            </p>
+          )}
         </div>
       </div>
     </div>

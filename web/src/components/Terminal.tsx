@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 import { Terminal as XTerm } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
@@ -12,14 +12,120 @@ interface TerminalProps {
 const RECONNECT_DELAY = 1000;
 const MAX_RECONNECT_DELAY = 10000;
 
+// ANSI escape sequences for special keys
+const KEY_SEQUENCES: Record<string, string> = {
+  up: "\x1b[A",
+  down: "\x1b[B",
+  left: "\x1b[D",
+  right: "\x1b[C",
+  enter: "\r",
+  tab: "\t",
+  escape: "\x1b",
+  "ctrl-c": "\x03",
+  backspace: "\x7f",
+};
+
+function useIsTouchDevice() {
+  const [isTouch, setIsTouch] = useState(false);
+  useEffect(() => {
+    const check = () =>
+      setIsTouch("ontouchstart" in window || navigator.maxTouchPoints > 0);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+  return isTouch;
+}
+
+interface VirtualKeybarProps {
+  onKey: (seq: string) => void;
+}
+
+function VirtualKeybar({ onKey }: VirtualKeybarProps) {
+  const [showExtra, setShowExtra] = useState(false);
+
+  const btn = (label: string, key: string, className?: string) => (
+    <button
+      onTouchStart={(e) => {
+        e.preventDefault();
+        onKey(KEY_SEQUENCES[key]);
+      }}
+      onMouseDown={(e) => {
+        e.preventDefault();
+        onKey(KEY_SEQUENCES[key]);
+      }}
+      className={`flex items-center justify-center rounded-md bg-zinc-800 border border-zinc-700
+        active:bg-zinc-600 text-sm font-medium select-none touch-manipulation ${className || "h-10 min-w-[2.75rem] px-2"}`}
+    >
+      {label}
+    </button>
+  );
+
+  return (
+    <div className="flex-shrink-0 bg-zinc-900 border-t border-zinc-800 px-2 py-1.5 safe-area-pb">
+      <div className="flex items-center gap-1.5">
+        {/* Arrow keys */}
+        {btn("←", "left")}
+        {btn("↓", "down")}
+        {btn("↑", "up")}
+        {btn("→", "right")}
+
+        <div className="w-px h-6 bg-zinc-700 mx-0.5" />
+
+        {/* Common keys */}
+        {btn("Enter", "enter", "h-10 px-3")}
+        {btn("Tab", "tab", "h-10 px-3")}
+
+        <div className="flex-1" />
+
+        {/* Toggle extra keys */}
+        <button
+          onTouchStart={(e) => {
+            e.preventDefault();
+            setShowExtra(!showExtra);
+          }}
+          onMouseDown={(e) => {
+            e.preventDefault();
+            setShowExtra(!showExtra);
+          }}
+          className={`flex items-center justify-center rounded-md border text-sm font-medium
+            select-none touch-manipulation h-10 px-2 ${
+              showExtra
+                ? "bg-zinc-600 border-zinc-500"
+                : "bg-zinc-800 border-zinc-700 active:bg-zinc-600"
+            }`}
+        >
+          ···
+        </button>
+      </div>
+
+      {showExtra && (
+        <div className="flex items-center gap-1.5 mt-1.5">
+          {btn("Esc", "escape")}
+          {btn("^C", "ctrl-c")}
+          {btn("⌫", "backspace")}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Terminal({ sessionId, visible = true }: TerminalProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<XTerm | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const fitRef = useRef<FitAddon | null>(null);
-  const reconnectTimer = useRef<ReturnType<typeof setTimeout>>();
+  const reconnectTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const reconnectDelay = useRef(RECONNECT_DELAY);
   const disposed = useRef(false);
+  const isTouch = useIsTouchDevice();
+
+  const sendInput = useCallback((data: string) => {
+    const ws = wsRef.current;
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(new TextEncoder().encode(data));
+    }
+  }, []);
 
   const connect = useCallback(
     (term: XTerm) => {
@@ -139,9 +245,11 @@ export default function Terminal({ sessionId, visible = true }: TerminalProps) {
 
   return (
     <div
-      ref={containerRef}
-      className="h-full w-full"
-      style={{ display: visible ? "block" : "none" }}
-    />
+      className="h-full flex flex-col"
+      style={{ display: visible ? "flex" : "none" }}
+    >
+      <div ref={containerRef} className="flex-1 min-h-0" />
+      {isTouch && <VirtualKeybar onKey={sendInput} />}
+    </div>
   );
 }

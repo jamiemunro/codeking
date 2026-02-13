@@ -93,12 +93,14 @@ func getAuthURL(barePath, pat string) string {
 	return url
 }
 
-func AddWorktree(barePath, worktreePath, branch string) error {
+// AddWorktree creates a new worktree with a new branch based off a source branch.
+// newBranch is the name of the branch to create, sourceBranch is the branch to base it on.
+func AddWorktree(barePath, worktreePath, newBranch, sourceBranch string) error {
 	if err := os.MkdirAll(filepath.Dir(worktreePath), 0755); err != nil {
 		return fmt.Errorf("create worktree parent: %w", err)
 	}
 
-	cmd := exec.Command("git", "-C", barePath, "worktree", "add", worktreePath, branch)
+	cmd := exec.Command("git", "-C", barePath, "worktree", "add", "-b", newBranch, worktreePath, sourceBranch)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("git worktree add: %s: %w", string(out), err)
 	}
