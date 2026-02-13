@@ -56,10 +56,17 @@ func CloneBare(cloneURL, pat, owner, name string) (string, error) {
 		return "", fmt.Errorf("git clone: %s: %w", string(out), err)
 	}
 
+	// git clone --bare doesn't set a fetch refspec, so git fetch won't update
+	// local branch refs. Configure it so fetch maps remote branches to local ones.
+	exec.Command("git", "-C", localPath, "config", "remote.origin.fetch", "+refs/heads/*:refs/heads/*").Run()
+
 	return localPath, nil
 }
 
 func Fetch(barePath, pat string) error {
+	// Ensure fetch refspec is configured (bare clones don't set this by default)
+	exec.Command("git", "-C", barePath, "config", "remote.origin.fetch", "+refs/heads/*:refs/heads/*").Run()
+
 	cmd := exec.Command("git", "-C", barePath, "fetch", "--all", "--prune")
 	if pat != "" {
 		cmd.Env = append(os.Environ(),
