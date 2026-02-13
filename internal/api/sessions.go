@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -138,26 +139,47 @@ func (h *SessionsHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 
 func (h *SessionsHandler) HandleDelete(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
+	deleteLocal := true
+	if raw := r.URL.Query().Get("delete_local"); raw != "" {
+		parsed, err := strconv.ParseBool(raw)
+		if err != nil {
+			WriteError(w, http.StatusBadRequest, "delete_local must be true or false")
+			return
+		}
+		deleteLocal = parsed
+	}
 
 	var worktreePath string
+	var branch string
 	var repoID int64
-	var status string
-	err := h.db.QueryRow(`SELECT worktree_path, repo_id, status FROM sessions WHERE id = ?`, id).
-		Scan(&worktreePath, &repoID, &status)
+	err := h.db.QueryRow(`SELECT worktree_path, repo_id, branch FROM sessions WHERE id = ?`, id).
+		Scan(&worktreePath, &repoID, &branch)
 	if err == sql.ErrNoRows {
 		WriteError(w, http.StatusNotFound, "session not found")
+		return
+	}
+	if err != nil {
+		WriteError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	// Stop PTY if still running
 	h.manager.Stop(id)
 
-	// Remove worktree
-	var localPath string
-	h.db.QueryRow(`SELECT local_path FROM repositories WHERE id = ?`, repoID).Scan(&localPath)
-	if localPath != "" && worktreePath != "" {
-		if err := git.RemoveWorktree(localPath, worktreePath); err != nil {
-			log.Printf("Failed to remove worktree %s: %v", worktreePath, err)
+	if deleteLocal {
+		var localPath string
+		h.db.QueryRow(`SELECT local_path FROM repositories WHERE id = ?`, repoID).Scan(&localPath)
+		if localPath != "" {
+			if worktreePath != "" {
+				if err := git.RemoveWorktree(localPath, worktreePath); err != nil {
+					log.Printf("Failed to remove worktree %s: %v", worktreePath, err)
+				}
+			}
+			if branch != "" {
+				if err := git.RemoveBranch(localPath, branch); err != nil {
+					log.Printf("Failed to remove branch %s: %v", branch, err)
+				}
+			}
 		}
 	}
 

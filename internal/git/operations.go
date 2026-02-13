@@ -115,6 +115,14 @@ func RemoveWorktree(barePath, worktreePath string) error {
 	return nil
 }
 
+func RemoveBranch(barePath, branch string) error {
+	cmd := exec.Command("git", "-C", barePath, "branch", "-D", branch)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("git branch delete: %s: %w", string(out), err)
+	}
+	return nil
+}
+
 func ListBranches(barePath string) ([]string, error) {
 	cmd := exec.Command("git", "-C", barePath, "branch", "--format=%(refname:short)")
 	out, err := cmd.Output()

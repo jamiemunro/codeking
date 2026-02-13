@@ -61,6 +61,8 @@ export const api = {
         cli_type: cliType,
       }),
     }),
-  deleteSession: (id: string) =>
-    request<void>(`/api/sessions/${id}`, { method: "DELETE" }),
+  deleteSession: (id: string, deleteLocal = true) =>
+    request<void>(`/api/sessions/${id}?delete_local=${deleteLocal}`, {
+      method: "DELETE",
+    }),
 };

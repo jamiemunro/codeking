@@ -51,7 +51,15 @@ export default function Sessions() {
   };
 
   const handleDelete = async (id: string) => {
-    await api.deleteSession(id);
+    const session = sessions.find((s) => s.id === id);
+    const target = session
+      ? `${session.repo_owner}/${session.repo_name} (${session.branch})`
+      : id;
+    const deleteLocal = window.confirm(
+      `Also delete the local branch/worktree for ${target}?\n\nOK = delete locally\nCancel = keep local files and branch`
+    );
+
+    await api.deleteSession(id, deleteLocal);
     closeTab(id);
     load();
   };
