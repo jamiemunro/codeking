@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -84,8 +85,10 @@ func (a *Auth) handleLoginPage(w http.ResponseWriter, r *http.Request) {
 	csrf := ""
 	if c, err := r.Cookie(csrfCookieName); err == nil && c.Value != "" {
 		csrf = c.Value
+		log.Printf("auth: GET /auth/login reusing existing CSRF cookie=%s", csrf)
 	} else {
 		csrf = a.generateCSRF()
+		log.Printf("auth: GET /auth/login generating new CSRF cookie=%s (cookie err=%v)", csrf, err)
 		http.SetCookie(w, &http.Cookie{
 			Name:     csrfCookieName,
 			Value:    csrf,
@@ -101,13 +104,25 @@ func (a *Auth) handleLoginPage(w http.ResponseWriter, r *http.Request) {
 
 func (a *Auth) handleLogin(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
+		log.Printf("auth: POST /auth/login ParseForm error: %v", err)
 		a.loginPage.Render(w, "", "Invalid request")
 		return
 	}
 
+	// Log all cookies received
+	log.Printf("auth: POST /auth/login cookies=%v", r.Header.Values("Cookie"))
+	log.Printf("auth: POST /auth/login form csrf_token=%s", r.FormValue("csrf_token"))
+
 	// Verify CSRF
 	csrfCookie, err := r.Cookie(csrfCookieName)
+	if err != nil {
+		log.Printf("auth: POST /auth/login CSRF cookie missing: %v", err)
+	} else {
+		log.Printf("auth: POST /auth/login CSRF cookie=%s, form=%s, match=%v",
+			csrfCookie.Value, r.FormValue("csrf_token"), csrfCookie.Value == r.FormValue("csrf_token"))
+	}
 	if err != nil || csrfCookie.Value == "" || csrfCookie.Value != r.FormValue("csrf_token") {
+		log.Printf("auth: POST /auth/login CSRF check FAILED")
 		csrf := a.generateCSRF()
 		http.SetCookie(w, &http.Cookie{
 			Name:     csrfCookieName,
@@ -121,6 +136,7 @@ func (a *Auth) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Printf("auth: POST /auth/login CSRF check passed")
 	username := r.FormValue("username")
 	password := r.FormValue("password")
 
