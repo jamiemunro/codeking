@@ -39,13 +39,13 @@ func NewAuth(username, password string) *Auth {
 }
 
 // Middleware returns an HTTP middleware that enforces authentication.
-// Exempt paths: /api/health, /auth/*, /tunnel
+// Exempt paths: /gateway/health, /auth/*, /tunnel
 func (a *Auth) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path
 
 		// Exempt paths
-		if path == "/api/health" || strings.HasPrefix(path, "/auth/") || path == "/tunnel" {
+		if path == "/gateway/health" || strings.HasPrefix(path, "/auth/") || path == "/tunnel" {
 			next.ServeHTTP(w, r)
 			return
 		}

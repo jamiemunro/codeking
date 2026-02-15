@@ -46,8 +46,9 @@ func Run(cfg Config, spaHandler http.Handler) error {
 	// Tunnel endpoint (authenticated by pre-shared secret, not user session)
 	mux.HandleFunc("/tunnel", tun.Handler())
 
-	// Health endpoint (exempt from auth)
-	mux.HandleFunc("GET /api/health", func(w http.ResponseWriter, r *http.Request) {
+	// Gateway health endpoint for k8s liveness probe (exempt from auth).
+	// Uses a distinct path so /api/health is proxied to the superposition server.
+	mux.HandleFunc("GET /gateway/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(`{"status":"ok","gateway":true}`))
 	})

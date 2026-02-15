@@ -47,7 +47,7 @@ spec:
                   key: gateway-secret
           livenessProbe:
             httpGet:
-              path: /api/health
+              path: /gateway/health
               port: https
               scheme: HTTPS
             initialDelaySeconds: 10
