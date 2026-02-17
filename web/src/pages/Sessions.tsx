@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api, SuperpositionOfflineError } from "../lib/api";
 import Terminal from "../components/Terminal";
+import TerminalPreview from "../components/TerminalPreview";
 import NewSessionModal from "../components/NewSessionModal";
 import { useIdleMonitor } from "../components/IdleMonitorContext";
 
@@ -297,6 +298,14 @@ function SessionCard({
           }`}
         />
       </div>
+      {running && (
+        <div
+          className="mt-2 cursor-pointer rounded overflow-hidden border border-zinc-800"
+          onClick={onOpen}
+        >
+          <TerminalPreview sessionId={session.id} />
+        </div>
+      )}
       <div className="flex flex-wrap gap-2 mt-3">
         {running && onOpen && (
           <button
