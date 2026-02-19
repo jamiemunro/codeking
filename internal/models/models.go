@@ -38,6 +38,7 @@ type CLIStatus struct {
 	Installed bool   `json:"installed"`
 	Authed    bool   `json:"authed"`
 	Path      string `json:"path,omitempty"`
+	Command   string `json:"command,omitempty"`
 }
 
 type HealthResponse struct {

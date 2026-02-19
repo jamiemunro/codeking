@@ -104,8 +104,11 @@ func (h *SessionsHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Resolve CLI command (may include args from settings override)
+	command := resolveCommand(h.db, body.CLIType)
+
 	// Start PTY
-	sess, pid, err := h.manager.Start(sessionID, body.CLIType, worktreePath)
+	sess, pid, err := h.manager.Start(sessionID, command, worktreePath)
 	if err != nil {
 		git.RemoveWorktree(repo.LocalPath, worktreePath)
 		WriteError(w, http.StatusInternalServerError, fmt.Sprintf("start session: %v", err))
@@ -185,4 +188,15 @@ func (h *SessionsHandler) HandleDelete(w http.ResponseWriter, r *http.Request) {
 	// Delete the session row
 	h.db.Exec(`DELETE FROM sessions WHERE id = ?`, id)
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// resolveCommand returns the override command string for a CLI type if one
+// exists in settings, otherwise returns the bare CLI type name.
+func resolveCommand(db *sql.DB, cliType string) string {
+	var val string
+	err := db.QueryRow(`SELECT value FROM settings WHERE key = ?`, "cli_command."+cliType).Scan(&val)
+	if err == nil && val != "" {
+		return val
+	}
+	return cliType
 }

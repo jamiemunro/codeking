@@ -11,6 +11,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"syscall"
 
@@ -255,7 +256,8 @@ func (s *Shepherd) handleControl(cw *connWriter, payload []byte) {
 }
 
 func (s *Shepherd) handleStart(cw *connWriter, req Request) {
-	cmd := exec.Command(req.CLIType)
+	args := strings.Fields(req.CLIType)
+	cmd := exec.Command(args[0], args[1:]...)
 	cmd.Dir = req.WorkDir
 	cmd.Env = os.Environ()
 

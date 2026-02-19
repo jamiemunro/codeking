@@ -57,15 +57,6 @@ func main() {
 	fmt.Println("===================================")
 	fmt.Println()
 
-	// Preflight checks
-	fmt.Println("Running preflight checks...")
-	cliStatus, gitOk := preflight.CheckAll()
-	if !gitOk {
-		fmt.Println("\ngit is required. Please install git and try again.")
-		os.Exit(1)
-	}
-	fmt.Println()
-
 	// Open database
 	database, err := db.Open()
 	if err != nil {
@@ -95,6 +86,15 @@ func main() {
 	if err := db.Migrate(database, string(migration003)); err != nil {
 		log.Fatalf("Failed to run migration 003: %v", err)
 	}
+
+	// Preflight checks (after DB init so overrides can be read)
+	fmt.Println("Running preflight checks...")
+	cliStatus, gitOk := preflight.CheckAll(database)
+	if !gitOk {
+		fmt.Println("\ngit is required. Please install git and try again.")
+		os.Exit(1)
+	}
+	fmt.Println()
 
 	// Connect to or start the shepherd process
 	var mgr ptymgr.SessionManager

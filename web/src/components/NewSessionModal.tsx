@@ -26,6 +26,9 @@ export default function NewSessionModal({ open, onClose, onCreated }: Props) {
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [cliOverrides, setCliOverrides] = useState<Record<string, string>>({});
+  const [editingOverride, setEditingOverride] = useState<string | null>(null);
+  const [overrideInput, setOverrideInput] = useState("");
 
   useEffect(() => {
     if (open) {
@@ -35,6 +38,21 @@ export default function NewSessionModal({ open, onClose, onCreated }: Props) {
         if (ready.length > 0 && !repoId) {
           setRepoId(ready[0].id);
         }
+      });
+      // Load CLI command overrides
+      Promise.all(
+        (["claude", "codex", "gemini"] as const).map((type) =>
+          api
+            .getSetting(`cli_command.${type}`)
+            .then((s) => [type, s.value] as const)
+            .catch(() => [type, ""] as const),
+        ),
+      ).then((results) => {
+        const overrides: Record<string, string> = {};
+        for (const [type, value] of results) {
+          if (value) overrides[type] = value;
+        }
+        setCliOverrides(overrides);
       });
     }
   }, [open]);
@@ -166,6 +184,110 @@ export default function NewSessionModal({ open, onClose, onCreated }: Props) {
                 </button>
               ))}
             </div>
+            {editingOverride === cliType ? (
+              <div className="mt-2 flex gap-2">
+                <input
+                  type="text"
+                  value={overrideInput}
+                  onChange={(e) => setOverrideInput(e.target.value)}
+                  placeholder={`e.g. ${cliType} --model my-model`}
+                  className="flex-1 px-3 py-1.5 bg-zinc-800 border border-zinc-700 rounded-md text-sm placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      const val = overrideInput.trim();
+                      if (val) {
+                        api.putSetting(`cli_command.${cliType}`, val);
+                        setCliOverrides((prev) => ({
+                          ...prev,
+                          [cliType]: val,
+                        }));
+                      } else {
+                        api.deleteSetting(`cli_command.${cliType}`);
+                        setCliOverrides((prev) => {
+                          const next = { ...prev };
+                          delete next[cliType];
+                          return next;
+                        });
+                      }
+                      setEditingOverride(null);
+                    } else if (e.key === "Escape") {
+                      setEditingOverride(null);
+                    }
+                  }}
+                />
+                <button
+                  onClick={() => {
+                    const val = overrideInput.trim();
+                    if (val) {
+                      api.putSetting(`cli_command.${cliType}`, val);
+                      setCliOverrides((prev) => ({
+                        ...prev,
+                        [cliType]: val,
+                      }));
+                    } else {
+                      api.deleteSetting(`cli_command.${cliType}`);
+                      setCliOverrides((prev) => {
+                        const next = { ...prev };
+                        delete next[cliType];
+                        return next;
+                      });
+                    }
+                    setEditingOverride(null);
+                  }}
+                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-sm rounded-md transition-colors"
+                >
+                  Save
+                </button>
+                <button
+                  onClick={() => setEditingOverride(null)}
+                  className="px-3 py-1.5 text-sm text-zinc-400 hover:text-white transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <div className="mt-1.5 flex items-center gap-2 text-xs text-zinc-500">
+                {cliOverrides[cliType] ? (
+                  <>
+                    <span className="font-mono truncate">
+                      {cliOverrides[cliType]}
+                    </span>
+                    <button
+                      onClick={() => {
+                        setOverrideInput(cliOverrides[cliType] || "");
+                        setEditingOverride(cliType);
+                      }}
+                      className="text-zinc-400 hover:text-white transition-colors shrink-0"
+                    >
+                      edit
+                    </button>
+                    <button
+                      onClick={() => {
+                        api.deleteSetting(`cli_command.${cliType}`);
+                        setCliOverrides((prev) => {
+                          const next = { ...prev };
+                          delete next[cliType];
+                          return next;
+                        });
+                      }}
+                      className="text-zinc-400 hover:text-red-400 transition-colors shrink-0"
+                    >
+                      clear
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setOverrideInput("");
+                      setEditingOverride(cliType);
+                    }}
+                    className="text-zinc-400 hover:text-white transition-colors"
+                  >
+                    Configure custom command...
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
