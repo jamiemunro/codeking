@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 	"sync"
 	"syscall"
 
@@ -97,7 +98,8 @@ func NewManager() *Manager {
 }
 
 func (m *Manager) Start(id, cliType, workDir string) (SessionHandle, int, error) {
-	cmd := exec.Command(cliType)
+	args := strings.Fields(cliType)
+	cmd := exec.Command(args[0], args[1:]...)
 	cmd.Dir = workDir
 	cmd.Env = os.Environ()
 
