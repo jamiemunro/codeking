@@ -17,7 +17,8 @@ export function useConnectionStatus(): ConnectionStatus {
         const health = await api.gatewayHealth();
         if (!cancelled) setStatus(health.connected ? "connected" : "offline");
       } catch {
-        if (!cancelled) setStatus("offline");
+        // No gateway configured — if we can reach the page, we're connected
+        if (!cancelled) setStatus("connected");
       }
       if (!cancelled) {
         const delay = statusRef.current === "offline" ? 5_000 : 10_000;
