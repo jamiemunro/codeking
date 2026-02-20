@@ -176,6 +176,15 @@ export const api = {
       method: "PUT",
       body: JSON.stringify(config),
     }),
+
+  // Session Env Vars
+  getSessionEnv: (sessionId: string) =>
+    request<Record<string, string>>(`/api/sessions/${sessionId}/env`),
+  updateSessionEnv: (sessionId: string, env: Record<string, string>) =>
+    request<Record<string, string>>(`/api/sessions/${sessionId}/env`, {
+      method: "PUT",
+      body: JSON.stringify(env),
+    }),
 };
 
 export interface FileNode {

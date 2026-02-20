@@ -34,8 +34,8 @@ AI development workspace — not just a terminal wrapper. Worktree-isolated Clau
 
 - [x] File browser for the worktree (tree view, file preview)
 - [x] MCP configuration UI per session (add/remove/edit MCP servers)
-- [ ] Pass `--mcp-config` to Claude Code on session start
-- [ ] Session environment variable management
+- [x] Pass `--mcp-config` to Claude Code on session start (via .mcp.json auto-discovery)
+- [x] Session environment variable management
 
 ## Phase 4 — Integrations
 

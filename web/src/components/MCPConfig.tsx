@@ -154,12 +154,23 @@ export default function MCPConfig({ sessionId }: MCPConfigProps) {
   const [editing, setEditing] = useState<EditingServer | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Env vars state
+  const [envVars, setEnvVars] = useState<Record<string, string>>({});
+  const [envPairs, setEnvPairs] = useState<[string, string][]>([["", ""]]);
+  const [editingEnv, setEditingEnv] = useState(false);
+  const [savingEnv, setSavingEnv] = useState(false);
+
   const loadConfig = useCallback(() => {
     setLoading(true);
     setError(null);
-    api
-      .getMCPConfig(sessionId)
-      .then(setConfig)
+    Promise.all([
+      api.getMCPConfig(sessionId),
+      api.getSessionEnv(sessionId),
+    ])
+      .then(([mcpConfig, env]) => {
+        setConfig(mcpConfig);
+        setEnvVars(env);
+      })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, [sessionId]);
@@ -206,13 +217,36 @@ export default function MCPConfig({ sessionId }: MCPConfigProps) {
     [config, saveConfig],
   );
 
+  const handleStartEditEnv = useCallback(() => {
+    const entries = Object.entries(envVars);
+    setEnvPairs(entries.length > 0 ? entries as [string, string][] : [["", ""]]);
+    setEditingEnv(true);
+  }, [envVars]);
+
+  const handleSaveEnv = useCallback(async () => {
+    setSavingEnv(true);
+    const newEnv: Record<string, string> = {};
+    for (const [k, v] of envPairs) {
+      if (k.trim()) newEnv[k.trim()] = v;
+    }
+    try {
+      const saved = await api.updateSessionEnv(sessionId, newEnv);
+      setEnvVars(saved);
+      setEditingEnv(false);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Save failed");
+    } finally {
+      setSavingEnv(false);
+    }
+  }, [sessionId, envPairs]);
+
   const servers = config ? Object.entries(config.mcpServers) : [];
 
   return (
     <div className="h-full flex flex-col bg-zinc-950">
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-1.5 border-b border-zinc-800 shrink-0">
-        <span className="text-xs font-medium text-zinc-400">MCP Servers</span>
+        <span className="text-xs font-medium text-zinc-400">Session Config</span>
         <div className="flex items-center gap-2">
           {saving && (
             <span className="text-[10px] text-zinc-600">Saving...</span>
@@ -327,6 +361,103 @@ export default function MCPConfig({ sessionId }: MCPConfigProps) {
               + Add MCP Server
             </button>
           )}
+
+          {/* Env Vars Section */}
+          <div className="pt-3 mt-3 border-t border-zinc-800">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-medium text-zinc-400">
+                Environment Variables
+              </span>
+              {!editingEnv && (
+                <button
+                  onClick={handleStartEditEnv}
+                  className="text-[10px] text-zinc-500 hover:text-zinc-300 transition-colors"
+                >
+                  Edit
+                </button>
+              )}
+            </div>
+
+            {!editingEnv ? (
+              Object.keys(envVars).length === 0 ? (
+                <p className="text-xs text-zinc-600 py-1">
+                  No env vars set. These are passed to the session PTY on next
+                  restart.
+                </p>
+              ) : (
+                <div className="space-y-1">
+                  {Object.entries(envVars).map(([k, v]) => (
+                    <div
+                      key={k}
+                      className="flex items-center gap-2 text-[10px] font-mono"
+                    >
+                      <span className="text-zinc-300">{k}</span>
+                      <span className="text-zinc-600">=</span>
+                      <span className="text-zinc-500 truncate">{v}</span>
+                    </div>
+                  ))}
+                </div>
+              )
+            ) : (
+              <div className="space-y-1">
+                {envPairs.map(([k, v], i) => (
+                  <div key={i} className="flex gap-1">
+                    <input
+                      value={k}
+                      onChange={(e) => {
+                        const next = [...envPairs] as [string, string][];
+                        next[i] = [e.target.value, v];
+                        setEnvPairs(next);
+                      }}
+                      placeholder="KEY"
+                      className="flex-1 bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-xs text-zinc-200 font-mono focus:outline-none focus:border-zinc-500"
+                    />
+                    <input
+                      value={v}
+                      onChange={(e) => {
+                        const next = [...envPairs] as [string, string][];
+                        next[i] = [k, e.target.value];
+                        setEnvPairs(next);
+                      }}
+                      placeholder="value"
+                      className="flex-1 bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-xs text-zinc-200 font-mono focus:outline-none focus:border-zinc-500"
+                    />
+                    <button
+                      onClick={() =>
+                        setEnvPairs(envPairs.filter((_, j) => j !== i))
+                      }
+                      className="text-zinc-600 hover:text-zinc-300 px-1 text-xs"
+                    >
+                      &times;
+                    </button>
+                  </div>
+                ))}
+                <button
+                  onClick={() =>
+                    setEnvPairs([...envPairs, ["", ""]])
+                  }
+                  className="text-[10px] text-zinc-500 hover:text-zinc-300"
+                >
+                  + Add variable
+                </button>
+                <div className="flex gap-2 pt-1">
+                  <button
+                    onClick={handleSaveEnv}
+                    disabled={savingEnv}
+                    className="px-3 py-1 text-xs bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white rounded transition-colors"
+                  >
+                    {savingEnv ? "Saving..." : "Save"}
+                  </button>
+                  <button
+                    onClick={() => setEditingEnv(false)}
+                    className="px-3 py-1 text-xs text-zinc-400 hover:text-zinc-200 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

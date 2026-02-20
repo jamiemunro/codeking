@@ -10,7 +10,7 @@ type SessionHandle interface {
 
 // SessionManager manages PTY session lifecycles.
 type SessionManager interface {
-	Start(id, cliType, workDir string) (SessionHandle, int /* pid */, error)
+	Start(id, cliType, workDir string, env map[string]string) (SessionHandle, int /* pid */, error)
 	Stop(id string) error
 	Get(id string) SessionHandle
 	Resize(id string, rows, cols uint16) error

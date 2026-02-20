@@ -260,6 +260,9 @@ func (s *Shepherd) handleStart(cw *connWriter, req Request) {
 	cmd := exec.Command(args[0], args[1:]...)
 	cmd.Dir = req.WorkDir
 	cmd.Env = os.Environ()
+	for k, v := range req.Env {
+		cmd.Env = append(cmd.Env, k+"="+v)
+	}
 
 	ptmx, err := pty.StartWithSize(cmd, &pty.Winsize{Rows: 40, Cols: 120})
 	if err != nil {

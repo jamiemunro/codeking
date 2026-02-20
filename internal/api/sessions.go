@@ -126,8 +126,11 @@ func (h *SessionsHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 	// Resolve CLI command (may include args from settings override)
 	command := resolveCommand(h.db, body.CLIType)
 
+	// Load session env vars
+	envVars := loadSessionEnv(h.db, sessionID)
+
 	// Start PTY
-	sess, pid, err := h.manager.Start(sessionID, command, worktreePath)
+	sess, pid, err := h.manager.Start(sessionID, command, worktreePath, envVars)
 	if err != nil {
 		git.RemoveWorktree(repo.LocalPath, worktreePath)
 		WriteError(w, http.StatusInternalServerError, fmt.Sprintf("start session: %v", err))
@@ -231,4 +234,26 @@ func resolveCommand(db *sql.DB, cliType string) string {
 		return val
 	}
 	return cliType
+}
+
+// loadSessionEnv returns env vars stored for a session (may be empty for new sessions).
+func loadSessionEnv(db *sql.DB, sessionID string) map[string]string {
+	rows, err := db.Query(`SELECT key, value FROM session_env WHERE session_id = ?`, sessionID)
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
+
+	env := map[string]string{}
+	for rows.Next() {
+		var k, v string
+		if err := rows.Scan(&k, &v); err != nil {
+			continue
+		}
+		env[k] = v
+	}
+	if len(env) == 0 {
+		return nil
+	}
+	return env
 }

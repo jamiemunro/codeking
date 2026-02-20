@@ -41,6 +41,7 @@ func (s *Server) routes(spaHandler http.Handler) {
 	notes := api.NewNotesHandler(s.db)
 	upload := api.NewUploadHandler(s.db)
 	files := api.NewFilesHandler(s.db)
+	envvars := api.NewEnvVarsHandler(s.db)
 	wsHandler := ws.NewHandler(s.PtyMgr)
 
 	// Health
@@ -83,6 +84,10 @@ func (s *Server) routes(spaHandler http.Handler) {
 	// MCP Config
 	s.mux.HandleFunc("GET /api/sessions/{id}/mcp", files.HandleMCPGet)
 	s.mux.HandleFunc("PUT /api/sessions/{id}/mcp", files.HandleMCPPut)
+
+	// Session Env Vars
+	s.mux.HandleFunc("GET /api/sessions/{id}/env", envvars.HandleGet)
+	s.mux.HandleFunc("PUT /api/sessions/{id}/env", envvars.HandlePut)
 
 	// WebSocket
 	s.mux.Handle("GET /ws/session/{id}", wsHandler)

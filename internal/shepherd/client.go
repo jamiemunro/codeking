@@ -84,7 +84,7 @@ func (c *Client) ListSessions() ([]string, error) {
 }
 
 // Start implements ptymgr.SessionManager.
-func (c *Client) Start(id, cliType, workDir string) (ptymgr.SessionHandle, int, error) {
+func (c *Client) Start(id, cliType, workDir string, env map[string]string) (ptymgr.SessionHandle, int, error) {
 	// Pre-create done channel so we don't miss exit events
 	c.sessionMu.Lock()
 	c.sessionDone[id] = make(chan struct{})
@@ -95,6 +95,7 @@ func (c *Client) Start(id, cliType, workDir string) (ptymgr.SessionHandle, int, 
 		SessionID: id,
 		CLIType:   cliType,
 		WorkDir:   workDir,
+		Env:       env,
 	})
 	if err != nil {
 		c.sessionMu.Lock()

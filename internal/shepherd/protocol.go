@@ -44,9 +44,10 @@ type Request struct {
 	Command string `json:"command"` // cmdStart, cmdStop, etc.
 
 	// Start fields
-	SessionID string `json:"session_id,omitempty"`
-	CLIType   string `json:"cli_type,omitempty"`
-	WorkDir   string `json:"work_dir,omitempty"`
+	SessionID string            `json:"session_id,omitempty"`
+	CLIType   string            `json:"cli_type,omitempty"`
+	WorkDir   string            `json:"work_dir,omitempty"`
+	Env       map[string]string `json:"env,omitempty"`
 
 	// Resize fields
 	Rows uint16 `json:"rows,omitempty"`

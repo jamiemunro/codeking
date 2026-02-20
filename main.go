@@ -93,6 +93,13 @@ func main() {
 	if err := db.Migrate(database, string(migration005)); err != nil {
 		log.Fatalf("Failed to run migration 005: %v", err)
 	}
+	migration006, err := migrationsFS.ReadFile("migrations/006_session_env.sql")
+	if err != nil {
+		log.Fatalf("Failed to read migration 006: %v", err)
+	}
+	if err := db.Migrate(database, string(migration006)); err != nil {
+		log.Fatalf("Failed to run migration 006: %v", err)
+	}
 
 	// Preflight checks (after DB init so overrides can be read)
 	fmt.Println("Running preflight checks...")

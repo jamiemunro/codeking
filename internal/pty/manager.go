@@ -97,11 +97,14 @@ func NewManager() *Manager {
 	}
 }
 
-func (m *Manager) Start(id, cliType, workDir string) (SessionHandle, int, error) {
+func (m *Manager) Start(id, cliType, workDir string, env map[string]string) (SessionHandle, int, error) {
 	args := strings.Fields(cliType)
 	cmd := exec.Command(args[0], args[1:]...)
 	cmd.Dir = workDir
 	cmd.Env = os.Environ()
+	for k, v := range env {
+		cmd.Env = append(cmd.Env, k+"="+v)
+	}
 
 	ptmx, err := pty.StartWithSize(cmd, &pty.Winsize{Rows: 40, Cols: 120})
 	if err != nil {
