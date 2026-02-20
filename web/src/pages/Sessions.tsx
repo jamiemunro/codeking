@@ -7,8 +7,11 @@ import NewSessionModal from "../components/NewSessionModal";
 import NotePad from "../components/NotePad";
 import SplitPane from "../components/SplitPane";
 import FileUpload from "../components/FileUpload";
+import FileBrowser from "../components/FileBrowser";
 import { useIdleMonitor } from "../components/IdleMonitorContext";
 import { useToast } from "../components/Toast";
+
+type RightPanel = "notes" | "files" | null;
 
 interface SessionInfo {
   id: string;
@@ -29,17 +32,19 @@ export default function Sessions() {
   const [openTabs, setOpenTabs] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<"tabs" | "grid">("tabs");
   const [showModal, setShowModal] = useState(false);
-  const [showNotepad, setShowNotepad] = useState(() => {
-    return localStorage.getItem("codeking:showNotepad") === "true";
+  const [rightPanel, setRightPanel] = useState<RightPanel>(() => {
+    const saved = localStorage.getItem("codeking:rightPanel");
+    if (saved === "notes" || saved === "files") return saved;
+    return null;
   });
   const { idleSessions } = useIdleMonitor();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const toggleNotepad = useCallback(() => {
-    setShowNotepad((prev) => {
-      const next = !prev;
-      localStorage.setItem("codeking:showNotepad", String(next));
+  const togglePanel = useCallback((panel: "notes" | "files") => {
+    setRightPanel((prev) => {
+      const next = prev === panel ? null : panel;
+      localStorage.setItem("codeking:rightPanel", next ?? "");
       return next;
     });
   }, []);
@@ -200,31 +205,60 @@ export default function Sessions() {
 
           <div className="flex-1" />
 
-          {/* Notepad toggle — tab mode only */}
+          {/* Right panel toggles — tab mode only */}
           {viewMode === "tabs" && (
-            <button
-              onClick={toggleNotepad}
-              className={`shrink-0 px-2 py-1.5 rounded transition-colors ${
-                showNotepad
-                  ? "text-blue-400 hover:text-blue-300 bg-zinc-800/60"
-                  : "text-zinc-400 hover:text-white hover:bg-zinc-800/60"
-              }`}
-              title={showNotepad ? "Hide notepad" : "Show notepad"}
-            >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
+            <>
+              <button
+                onClick={() => togglePanel("notes")}
+                className={`shrink-0 px-2 py-1.5 rounded transition-colors ${
+                  rightPanel === "notes"
+                    ? "text-blue-400 hover:text-blue-300 bg-zinc-800/60"
+                    : "text-zinc-400 hover:text-white hover:bg-zinc-800/60"
+                }`}
+                title={rightPanel === "notes" ? "Hide notepad" : "Show notepad"}
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
-                />
-              </svg>
-            </button>
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
+                  />
+                </svg>
+              </button>
+              <button
+                onClick={() => togglePanel("files")}
+                className={`shrink-0 px-2 py-1.5 rounded transition-colors ${
+                  rightPanel === "files"
+                    ? "text-blue-400 hover:text-blue-300 bg-zinc-800/60"
+                    : "text-zinc-400 hover:text-white hover:bg-zinc-800/60"
+                }`}
+                title={
+                  rightPanel === "files"
+                    ? "Hide file browser"
+                    : "Show file browser"
+                }
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z"
+                  />
+                </svg>
+              </button>
+            </>
           )}
 
           {/* File upload button — tab mode only */}
@@ -301,7 +335,7 @@ export default function Sessions() {
           )}
         </div>
 
-        {/* Tab mode: single active terminal, optionally with notepad */}
+        {/* Tab mode: single active terminal, optionally with side panel */}
         {viewMode === "tabs" && activeTab && (
           <FileUpload
             sessionId={activeTab}
@@ -333,9 +367,9 @@ export default function Sessions() {
               }}
             />
             <div className="h-full">
-              {showNotepad ? (
+              {rightPanel ? (
                 <SplitPane
-                  storageKey="codeking:notepadSplit"
+                  storageKey="codeking:rightPanelSplit"
                   left={
                     <div className="relative h-full">
                       {openTabs.map((id) => (
@@ -354,7 +388,13 @@ export default function Sessions() {
                       ))}
                     </div>
                   }
-                  right={<NotePad sessionId={activeTab} />}
+                  right={
+                    rightPanel === "notes" ? (
+                      <NotePad sessionId={activeTab} />
+                    ) : (
+                      <FileBrowser sessionId={activeTab} />
+                    )
+                  }
                 />
               ) : (
                 <div className="relative h-full">

@@ -40,6 +40,7 @@ func (s *Server) routes(spaHandler http.Handler) {
 	sessions := api.NewSessionsHandler(s.db, s.PtyMgr)
 	notes := api.NewNotesHandler(s.db)
 	upload := api.NewUploadHandler(s.db)
+	files := api.NewFilesHandler(s.db)
 	wsHandler := ws.NewHandler(s.PtyMgr)
 
 	// Health
@@ -73,6 +74,11 @@ func (s *Server) routes(spaHandler http.Handler) {
 
 	// File Upload
 	s.mux.HandleFunc("POST /api/sessions/{id}/upload", upload.HandleUpload)
+
+	// File Browser
+	s.mux.HandleFunc("GET /api/sessions/{id}/files", files.HandleList)
+	s.mux.HandleFunc("GET /api/sessions/{id}/files/read", files.HandleRead)
+	s.mux.HandleFunc("GET /api/sessions/{id}/files/tree", files.HandleTree)
 
 	// WebSocket
 	s.mux.Handle("GET /ws/session/{id}", wsHandler)

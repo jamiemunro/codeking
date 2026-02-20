@@ -151,4 +151,34 @@ export const api = {
     if (!res.ok) throw new Error(data.error || "Upload failed");
     return data;
   },
+
+  // File Browser
+  getFileTree: (sessionId: string) =>
+    request<FileNode[]>(`/api/sessions/${sessionId}/files/tree`),
+  getFileList: (sessionId: string, path?: string) => {
+    const qs = path ? `?path=${encodeURIComponent(path)}` : "";
+    return request<FileEntry[]>(`/api/sessions/${sessionId}/files${qs}`);
+  },
+  getFileContent: (sessionId: string, path: string) =>
+    request<{
+      path: string;
+      size: number;
+      content: string;
+      binary?: boolean;
+      truncated?: boolean;
+    }>(`/api/sessions/${sessionId}/files/read?path=${encodeURIComponent(path)}`),
 };
+
+export interface FileNode {
+  name: string;
+  path: string;
+  is_dir: boolean;
+  children?: FileNode[];
+}
+
+export interface FileEntry {
+  name: string;
+  path: string;
+  is_dir: boolean;
+  size: number;
+}
