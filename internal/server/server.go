@@ -80,6 +80,10 @@ func (s *Server) routes(spaHandler http.Handler) {
 	s.mux.HandleFunc("GET /api/sessions/{id}/files/read", files.HandleRead)
 	s.mux.HandleFunc("GET /api/sessions/{id}/files/tree", files.HandleTree)
 
+	// MCP Config
+	s.mux.HandleFunc("GET /api/sessions/{id}/mcp", files.HandleMCPGet)
+	s.mux.HandleFunc("PUT /api/sessions/{id}/mcp", files.HandleMCPPut)
+
 	// WebSocket
 	s.mux.Handle("GET /ws/session/{id}", wsHandler)
 

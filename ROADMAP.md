@@ -24,16 +24,16 @@ AI development workspace — not just a terminal wrapper. Worktree-isolated Clau
 
 ## Phase 2.5 — File upload
 
-- [ ] `POST /api/sessions/{id}/upload` endpoint — writes files to session worktree
-- [ ] Drop zone in session UI — drag & drop files/screenshots onto the session
-- [ ] File picker button for selecting files from disk
-- [ ] Upload progress indicator and file path display (so Claude can reference uploaded files)
-- [ ] Max file size limit and allowed types validation
+- [x] `POST /api/sessions/{id}/upload` endpoint — writes files to session worktree
+- [x] Drop zone in session UI — drag & drop files/screenshots onto the session
+- [x] File picker button for selecting files from disk
+- [x] Upload progress indicator and file path display (so Claude can reference uploaded files)
+- [x] Max file size limit and allowed types validation
 
 ## Phase 3 — Project workspace
 
-- [ ] File browser for the worktree (tree view, file preview)
-- [ ] MCP configuration UI per session (add/remove/edit MCP servers)
+- [x] File browser for the worktree (tree view, file preview)
+- [x] MCP configuration UI per session (add/remove/edit MCP servers)
 - [ ] Pass `--mcp-config` to Claude Code on session start
 - [ ] Session environment variable management
 

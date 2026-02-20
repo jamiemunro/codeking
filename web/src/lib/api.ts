@@ -167,6 +167,15 @@ export const api = {
       binary?: boolean;
       truncated?: boolean;
     }>(`/api/sessions/${sessionId}/files/read?path=${encodeURIComponent(path)}`),
+
+  // MCP Config
+  getMCPConfig: (sessionId: string) =>
+    request<MCPConfig>(`/api/sessions/${sessionId}/mcp`),
+  updateMCPConfig: (sessionId: string, config: MCPConfig) =>
+    request<MCPConfig>(`/api/sessions/${sessionId}/mcp`, {
+      method: "PUT",
+      body: JSON.stringify(config),
+    }),
 };
 
 export interface FileNode {
@@ -181,4 +190,15 @@ export interface FileEntry {
   path: string;
   is_dir: boolean;
   size: number;
+}
+
+export interface MCPServerConfig {
+  type?: string;
+  command: string;
+  args?: string[];
+  env?: Record<string, string>;
+}
+
+export interface MCPConfig {
+  mcpServers: Record<string, MCPServerConfig>;
 }

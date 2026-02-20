@@ -2,6 +2,8 @@ package api
 
 import (
 	"database/sql"
+	"encoding/json"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -197,6 +199,70 @@ func (h *FilesHandler) HandleTree(w http.ResponseWriter, r *http.Request) {
 
 	tree := walk(worktreePath, "", 0)
 	WriteJSON(w, http.StatusOK, tree)
+}
+
+// HandleMCPGet returns the .mcp.json config for a session.
+func (h *FilesHandler) HandleMCPGet(w http.ResponseWriter, r *http.Request) {
+	sessionID := r.PathValue("id")
+	worktreePath, err := h.getWorktreePath(sessionID)
+	if err != nil {
+		WriteError(w, http.StatusNotFound, "session not found")
+		return
+	}
+
+	mcpPath := filepath.Join(worktreePath, ".mcp.json")
+	data, err := os.ReadFile(mcpPath)
+	if err != nil {
+		// No .mcp.json yet — return empty config
+		WriteJSON(w, http.StatusOK, map[string]any{
+			"mcpServers": map[string]any{},
+		})
+		return
+	}
+
+	// Parse and re-emit to validate JSON
+	var config map[string]any
+	if err := json.Unmarshal(data, &config); err != nil {
+		WriteJSON(w, http.StatusOK, map[string]any{
+			"mcpServers": map[string]any{},
+		})
+		return
+	}
+
+	WriteJSON(w, http.StatusOK, config)
+}
+
+// HandleMCPPut writes the .mcp.json config for a session.
+func (h *FilesHandler) HandleMCPPut(w http.ResponseWriter, r *http.Request) {
+	sessionID := r.PathValue("id")
+	worktreePath, err := h.getWorktreePath(sessionID)
+	if err != nil {
+		WriteError(w, http.StatusNotFound, "session not found")
+		return
+	}
+
+	body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20)) // 1MB max
+	if err != nil {
+		WriteError(w, http.StatusBadRequest, "failed to read body")
+		return
+	}
+
+	// Validate JSON structure
+	var config map[string]any
+	if err := json.Unmarshal(body, &config); err != nil {
+		WriteError(w, http.StatusBadRequest, "invalid JSON")
+		return
+	}
+
+	mcpPath := filepath.Join(worktreePath, ".mcp.json")
+	// Pretty-print for readability
+	formatted, _ := json.MarshalIndent(config, "", "  ")
+	if err := os.WriteFile(mcpPath, formatted, 0644); err != nil {
+		WriteError(w, http.StatusInternalServerError, "failed to write .mcp.json")
+		return
+	}
+
+	WriteJSON(w, http.StatusOK, config)
 }
 
 func (h *FilesHandler) getWorktreePath(sessionID string) (string, error) {
