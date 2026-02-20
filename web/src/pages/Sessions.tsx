@@ -6,7 +6,9 @@ import TerminalPreview from "../components/TerminalPreview";
 import NewSessionModal from "../components/NewSessionModal";
 import NotePad from "../components/NotePad";
 import SplitPane from "../components/SplitPane";
+import FileUpload from "../components/FileUpload";
 import { useIdleMonitor } from "../components/IdleMonitorContext";
+import { useToast } from "../components/Toast";
 
 interface SessionInfo {
   id: string;
@@ -31,6 +33,8 @@ export default function Sessions() {
     return localStorage.getItem("codeking:showNotepad") === "true";
   });
   const { idleSessions } = useIdleMonitor();
+  const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const toggleNotepad = useCallback(() => {
     setShowNotepad((prev) => {
@@ -223,6 +227,29 @@ export default function Sessions() {
             </button>
           )}
 
+          {/* File upload button — tab mode only */}
+          {viewMode === "tabs" && (
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="shrink-0 text-zinc-400 hover:text-white px-2 py-1.5 rounded hover:bg-zinc-800/60 transition-colors"
+              title="Upload file to worktree"
+            >
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"
+                />
+              </svg>
+            </button>
+          )}
+
           {/* View mode toggle */}
           {openTabs.length > 1 && (
             <button
@@ -275,46 +302,77 @@ export default function Sessions() {
         </div>
 
         {/* Tab mode: single active terminal, optionally with notepad */}
-        {viewMode === "tabs" && (
-          <div className="flex-1 min-h-0">
-            {showNotepad ? (
-              <SplitPane
-                storageKey="codeking:notepadSplit"
-                left={
-                  <div className="relative h-full">
-                    {openTabs.map((id) => (
-                      <div
-                        key={id}
-                        className="absolute inset-0 p-3"
-                        style={{
-                          display: activeTab === id ? "block" : "none",
-                        }}
-                      >
-                        <Terminal sessionId={id} visible={activeTab === id} />
-                      </div>
-                    ))}
-                  </div>
+        {viewMode === "tabs" && activeTab && (
+          <FileUpload
+            sessionId={activeTab}
+            onUploaded={(r) =>
+              toast(`Uploaded ${r.path} (${formatSize(r.size)})`, "success")
+            }
+            onError={(msg) => toast(msg, "error")}
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                if (e.target.files && e.target.files.length > 0 && activeTab) {
+                  Array.from(e.target.files).forEach((file) => {
+                    api
+                      .uploadFile(activeTab, file)
+                      .then((r) =>
+                        toast(
+                          `Uploaded ${r.path} (${formatSize(r.size)})`,
+                          "success",
+                        ),
+                      )
+                      .catch((err) => toast(err.message, "error"));
+                  });
+                  e.target.value = "";
                 }
-                right={
-                  activeTab ? <NotePad sessionId={activeTab} /> : <div />
-                }
-              />
-            ) : (
-              <div className="relative h-full">
-                {openTabs.map((id) => (
-                  <div
-                    key={id}
-                    className="absolute inset-0 p-3"
-                    style={{
-                      display: activeTab === id ? "block" : "none",
-                    }}
-                  >
-                    <Terminal sessionId={id} visible={activeTab === id} />
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+              }}
+            />
+            <div className="h-full">
+              {showNotepad ? (
+                <SplitPane
+                  storageKey="codeking:notepadSplit"
+                  left={
+                    <div className="relative h-full">
+                      {openTabs.map((id) => (
+                        <div
+                          key={id}
+                          className="absolute inset-0 p-3"
+                          style={{
+                            display: activeTab === id ? "block" : "none",
+                          }}
+                        >
+                          <Terminal
+                            sessionId={id}
+                            visible={activeTab === id}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  }
+                  right={<NotePad sessionId={activeTab} />}
+                />
+              ) : (
+                <div className="relative h-full">
+                  {openTabs.map((id) => (
+                    <div
+                      key={id}
+                      className="absolute inset-0 p-3"
+                      style={{
+                        display: activeTab === id ? "block" : "none",
+                      }}
+                    >
+                      <Terminal sessionId={id} visible={activeTab === id} />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </FileUpload>
         )}
 
         {/* Grid mode: all terminals visible */}
@@ -444,6 +502,12 @@ export default function Sessions() {
       />
     </div>
   );
+}
+
+function formatSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function timeAgo(dateStr: string): string {

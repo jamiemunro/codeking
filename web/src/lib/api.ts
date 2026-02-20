@@ -129,4 +129,26 @@ export const api = {
         body: JSON.stringify({ content }),
       },
     ),
+
+  // File Upload
+  uploadFile: async (
+    sessionId: string,
+    file: File,
+    path?: string,
+  ): Promise<{ filename: string; path: string; size: number }> => {
+    const form = new FormData();
+    form.append("file", file);
+    if (path) form.append("path", path);
+    const res = await fetch(`/api/sessions/${sessionId}/upload`, {
+      method: "POST",
+      body: form,
+    });
+    if (res.status === 401) {
+      window.location.href = "/auth/login";
+      throw new Error("Unauthorized");
+    }
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Upload failed");
+    return data;
+  },
 };
