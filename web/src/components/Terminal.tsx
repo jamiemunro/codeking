@@ -12,6 +12,7 @@ interface TerminalProps {
 
 const RECONNECT_DELAY = 1000;
 const MAX_RECONNECT_DELAY = 10000;
+const MAX_RECONNECT_ATTEMPTS = 30;
 
 // ANSI escape sequences for special keys
 const KEY_SEQUENCES: Record<string, string> = {
@@ -131,10 +132,27 @@ export default function Terminal({ sessionId, visible = true }: TerminalProps) {
     }
   }, []);
 
+  // Track consecutive failures where the WS never opened (HTTP error before upgrade)
+  const neverOpened = useRef(0);
+
+  const checkSessionAlive = useCallback(async (): Promise<boolean> => {
+    try {
+      const sessions = await fetch("/api/sessions").then((r) => r.json());
+      const match = sessions.find(
+        (s: { id: string; status: string }) => s.id === sessionId,
+      );
+      return match?.status === "running";
+    } catch {
+      // Server unreachable — might still be restarting
+      return true;
+    }
+  }, [sessionId]);
+
   const connect = useCallback(
     (term: XTerm) => {
       if (disposed.current) return;
 
+      let opened = false;
       const proto = location.protocol === "https:" ? "wss:" : "ws:";
       const ws = new WebSocket(
         `${proto}//${location.host}/ws/session/${sessionId}`,
@@ -143,6 +161,8 @@ export default function Terminal({ sessionId, visible = true }: TerminalProps) {
       wsRef.current = ws;
 
       ws.onopen = () => {
+        opened = true;
+        neverOpened.current = 0;
         reconnectDelay.current = RECONNECT_DELAY;
         setConnState("connected");
         setAttempts(0);
@@ -170,20 +190,36 @@ export default function Terminal({ sessionId, visible = true }: TerminalProps) {
           setConnState("ended");
           return;
         }
+
+        if (!opened) {
+          neverOpened.current += 1;
+        }
+
         setConnState("reconnecting");
-        setAttempts((prev) => prev + 1);
-        reconnectTimer.current = setTimeout(() => {
-          try {
-            term.clear();
-          } catch (err) {
-            console.error("terminal clear error:", err);
+        setAttempts((prev) => {
+          const next = prev + 1;
+          if (next >= MAX_RECONNECT_ATTEMPTS) {
+            setConnState("ended");
           }
-          connect(term);
-          reconnectDelay.current = Math.min(
-            reconnectDelay.current * 2,
-            MAX_RECONNECT_DELAY,
-          );
-        }, reconnectDelay.current);
+          return next;
+        });
+
+        // After 3 consecutive failures where WS never opened, check REST API
+        if (neverOpened.current >= 3) {
+          checkSessionAlive().then((alive) => {
+            if (disposed.current) return;
+            if (!alive) {
+              clearTimeout(reconnectTimer.current);
+              setConnState("ended");
+              return;
+            }
+            // Server is up but session not ready yet — keep retrying
+            scheduleReconnect(term);
+          });
+          return;
+        }
+
+        scheduleReconnect(term);
       };
 
       ws.onerror = (ev) => {
@@ -198,7 +234,25 @@ export default function Terminal({ sessionId, visible = true }: TerminalProps) {
         }
       });
     },
-    [sessionId],
+    [sessionId, checkSessionAlive],
+  );
+
+  const scheduleReconnect = useCallback(
+    (term: XTerm) => {
+      reconnectTimer.current = setTimeout(() => {
+        try {
+          term.clear();
+        } catch (err) {
+          console.error("terminal clear error:", err);
+        }
+        connect(term);
+        reconnectDelay.current = Math.min(
+          reconnectDelay.current * 2,
+          MAX_RECONNECT_DELAY,
+        );
+      }, reconnectDelay.current);
+    },
+    [connect],
   );
 
   const manualReconnect = useCallback(() => {
