@@ -74,6 +74,19 @@ func (c *Client) Ping() error {
 	return nil
 }
 
+// PingVersion pings the shepherd and returns its build hash.
+// Old shepherds without version support return an empty string.
+func (c *Client) PingVersion() (string, error) {
+	resp, err := c.sendRequest(Request{Command: cmdPing})
+	if err != nil {
+		return "", err
+	}
+	if resp.Event != evtPong {
+		return "", fmt.Errorf("unexpected response: %s", resp.Event)
+	}
+	return resp.Version, nil
+}
+
 // ListSessions returns all active session IDs in the shepherd.
 func (c *Client) ListSessions() ([]string, error) {
 	resp, err := c.sendRequest(Request{Command: cmdList})

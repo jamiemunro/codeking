@@ -13,6 +13,8 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -153,23 +155,36 @@ func main() {
 }
 
 // connectOrStartShepherd connects to an existing shepherd or launches a new one.
+// If the existing shepherd was built from a different binary, it is killed and
+// a new one is started so that code changes (like command parsing) take effect.
 func connectOrStartShepherd() (*shepherd.Client, error) {
 	socketPath, err := shepherd.SocketPath()
 	if err != nil {
 		return nil, err
 	}
 
+	myHash := shepherd.BuildHash()
+
 	// Try connecting to existing shepherd
 	client, err := shepherd.NewClient(socketPath)
 	if err == nil {
-		if err := client.Ping(); err == nil {
+		peerHash, err := client.PingVersion()
+		if err == nil && peerHash == myHash {
 			log.Println("Connected to existing shepherd")
 			return client, nil
 		}
 		client.Close()
+		if err == nil {
+			// Connected but version mismatch — kill old shepherd
+			log.Printf("Shepherd binary changed (%s -> %s), restarting...", peerHash, myHash)
+			killStaleShepherd()
+		}
 	}
 
-	// Launch a new shepherd process
+	return startShepherd(socketPath)
+}
+
+func startShepherd(socketPath string) (*shepherd.Client, error) {
 	log.Println("Starting shepherd process...")
 	exe, err := os.Executable()
 	if err != nil {
@@ -187,6 +202,7 @@ func connectOrStartShepherd() (*shepherd.Client, error) {
 	cmd.Process.Release()
 
 	// Wait for shepherd to become available
+	var client *shepherd.Client
 	for i := 0; i < 40; i++ { // 40 * 50ms = 2s
 		time.Sleep(50 * time.Millisecond)
 		client, err = shepherd.NewClient(socketPath)
@@ -200,6 +216,43 @@ func connectOrStartShepherd() (*shepherd.Client, error) {
 	}
 
 	return nil, fmt.Errorf("shepherd did not become available within 2s")
+}
+
+// killStaleShepherd sends SIGTERM to the old shepherd and waits for it to exit.
+func killStaleShepherd() {
+	pidPath, err := shepherd.PIDPath()
+	if err != nil {
+		return
+	}
+	socketPath, err := shepherd.SocketPath()
+	if err != nil {
+		return
+	}
+
+	pidData, err := os.ReadFile(pidPath)
+	if err != nil {
+		return
+	}
+	pid, err := strconv.Atoi(strings.TrimSpace(string(pidData)))
+	if err != nil {
+		return
+	}
+	proc, err := os.FindProcess(pid)
+	if err != nil {
+		return
+	}
+	proc.Signal(syscall.SIGTERM)
+
+	// Wait for shepherd to clean up (it removes socket/pid in its signal handler)
+	for i := 0; i < 20; i++ { // 20 * 100ms = 2s
+		time.Sleep(100 * time.Millisecond)
+		if _, err := os.Stat(socketPath); os.IsNotExist(err) {
+			return
+		}
+	}
+	// Force cleanup if it didn't exit gracefully
+	os.Remove(socketPath)
+	os.Remove(pidPath)
 }
 
 // reconcileSessions reconciles the database with the shepherd's active sessions.

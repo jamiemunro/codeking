@@ -229,7 +229,7 @@ func (s *Shepherd) handleControl(cw *connWriter, payload []byte) {
 
 	switch req.Command {
 	case cmdPing:
-		s.sendResponse(cw, Response{ID: req.ID, Event: evtPong})
+		s.sendResponse(cw, Response{ID: req.ID, Event: evtPong, Version: BuildHash()})
 
 	case cmdStart:
 		s.handleStart(cw, req)

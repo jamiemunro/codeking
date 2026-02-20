@@ -71,6 +71,9 @@ type Response struct {
 	// List response
 	Sessions []string `json:"sessions,omitempty"`
 
+	// Pong response
+	Version string `json:"version,omitempty"`
+
 	// Exited notification (no request ID)
 	// SessionID is set above
 }
