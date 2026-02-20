@@ -14,6 +14,7 @@ A web-based application for running AI coding sessions (Claude Code and Codex) a
 - **Browser Terminal** — Full xterm.js terminal with automatic reconnection and 100 KB replay buffer, plus virtual keyboard for mobile/touch devices
 - **Session Persistence** — A background shepherd process keeps PTY sessions alive across server restarts, so deploys never kill a running session
 - **Repository Management** — Clone and sync GitHub repos via Personal Access Token
+- **Remote Access Gateway** — Optional reverse-tunnel proxy with TLS and login auth for accessing sessions from anywhere, no inbound ports required
 - **Single Binary** — Compiles to a standalone Go binary with the React frontend embedded
 
 ## Screenshots
@@ -102,8 +103,57 @@ This produces a single `./superposition` binary with the React SPA embedded. No 
 ### CLI flags
 
 ```
--port int   server port (default 8800)
+-port int              server port (default 8800)
+-gateway string        gateway URL to tunnel through (e.g. wss://gateway.example.com/tunnel)
+-gateway-secret string pre-shared secret for gateway authentication
 ```
+
+Environment variables `SP_GATEWAY_URL` and `SP_GATEWAY_SECRET` can be used instead of flags.
+
+## Remote Access (Gateway Mode)
+
+The gateway is a reverse-tunnel proxy that lets you access your local Superposition instance from anywhere — useful for accessing sessions from a phone, tablet, or another machine.
+
+The gateway runs as a separate TLS server (self-signed by default) with username/password authentication. Your local Superposition connects outbound to it, so no inbound ports or firewall changes are needed on your dev machine.
+
+### 1. Start the gateway on a public server
+
+```bash
+SP_USERNAME=admin SP_PASSWORD=changeme ./superposition gateway
+```
+
+The gateway listens on port 443 by default and prints a tunnel URL and auto-generated secret:
+
+```
+Listening on https://0.0.0.0:443
+Tunnel secret: <generated>
+
+Connect superposition with:
+  superposition --gateway wss://YOUR_HOST/tunnel --gateway-secret <secret>
+```
+
+#### Gateway flags
+
+| Flag | Env var | Default | Description |
+|------|---------|---------|-------------|
+| `--port` | — | `443` | HTTPS listen port |
+| `--tls-cert` | — | — | Path to TLS certificate (auto-generates self-signed if omitted) |
+| `--tls-key` | — | — | Path to TLS private key |
+| — | `SP_USERNAME` | *(required)* | Login username |
+| — | `SP_PASSWORD` | *(required)* | Login password |
+| — | `SP_GATEWAY_SECRET` | *(auto-generated)* | Pre-shared secret for tunnel auth |
+
+### 2. Connect your local instance
+
+```bash
+./superposition --gateway wss://your-server.com/tunnel --gateway-secret <secret>
+```
+
+This opens an outbound WebSocket to the gateway. All HTTP and WebSocket traffic is multiplexed through the tunnel via [yamux](https://github.com/hashicorp/yamux), so the UI, API, and terminal sessions all work remotely.
+
+### 3. Open the gateway in your browser
+
+Navigate to `https://your-server.com` and log in with the username and password you configured. The gateway proxies everything to your local instance — you get the full Superposition UI with live terminal access.
 
 ## Architecture
 
@@ -120,6 +170,8 @@ This produces a single `./superposition` binary with the React SPA embedded. No 
 │   ├── preflight/           # CLI dependency checks
 │   ├── server/              # HTTP server + middleware
 │   ├── shepherd/            # Long-lived PTY process manager (survives restarts)
+│   ├── tunnel/              # Outbound tunnel client (connects to gateway)
+│   ├── gateway/             # Remote access gateway (TLS, auth, reverse proxy)
 │   └── ws/                  # WebSocket terminal streaming
 └── web/                     # React frontend
     └── src/
