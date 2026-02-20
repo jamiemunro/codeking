@@ -100,6 +100,20 @@ func main() {
 	if err := db.Migrate(database, string(migration006)); err != nil {
 		log.Fatalf("Failed to run migration 006: %v", err)
 	}
+	migration007, err := migrationsFS.ReadFile("migrations/007_webhooks.sql")
+	if err != nil {
+		log.Fatalf("Failed to read migration 007: %v", err)
+	}
+	if err := db.Migrate(database, string(migration007)); err != nil {
+		log.Fatalf("Failed to run migration 007: %v", err)
+	}
+	migration008, err := migrationsFS.ReadFile("migrations/008_session_ui.sql")
+	if err != nil {
+		log.Fatalf("Failed to read migration 008: %v", err)
+	}
+	if err := db.Migrate(database, string(migration008)); err != nil {
+		log.Fatalf("Failed to run migration 008: %v", err)
+	}
 
 	// Preflight checks (after DB init so overrides can be read)
 	fmt.Println("Running preflight checks...")

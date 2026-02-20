@@ -37,11 +37,13 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (s *Server) routes(spaHandler http.Handler) {
 	settings := api.NewSettingsHandler(s.db)
 	repos := api.NewReposHandler(s.db)
-	sessions := api.NewSessionsHandler(s.db, s.PtyMgr)
+	webhooks := api.NewWebhooksHandler(s.db)
+	sessions := api.NewSessionsHandler(s.db, s.PtyMgr, webhooks)
 	notes := api.NewNotesHandler(s.db)
 	upload := api.NewUploadHandler(s.db)
 	files := api.NewFilesHandler(s.db)
 	envvars := api.NewEnvVarsHandler(s.db)
+	sessionUI := api.NewSessionUIHandler(s.db)
 	wsHandler := ws.NewHandler(s.PtyMgr)
 
 	// Health
@@ -88,6 +90,17 @@ func (s *Server) routes(spaHandler http.Handler) {
 	// Session Env Vars
 	s.mux.HandleFunc("GET /api/sessions/{id}/env", envvars.HandleGet)
 	s.mux.HandleFunc("PUT /api/sessions/{id}/env", envvars.HandlePut)
+
+	// Session UI (A2UI)
+	s.mux.HandleFunc("GET /api/sessions/{id}/ui", sessionUI.HandleGet)
+	s.mux.HandleFunc("PUT /api/sessions/{id}/ui", sessionUI.HandlePut)
+
+	// Webhooks
+	s.mux.HandleFunc("GET /api/webhooks", webhooks.HandleList)
+	s.mux.HandleFunc("POST /api/webhooks", webhooks.HandleCreate)
+	s.mux.HandleFunc("PUT /api/webhooks/{id}", webhooks.HandleUpdate)
+	s.mux.HandleFunc("DELETE /api/webhooks/{id}", webhooks.HandleDelete)
+	s.mux.HandleFunc("POST /api/webhooks/{id}/test", webhooks.HandleTest)
 
 	// WebSocket
 	s.mux.Handle("GET /ws/session/{id}", wsHandler)

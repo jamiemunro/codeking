@@ -18,12 +18,13 @@ import (
 )
 
 type SessionsHandler struct {
-	db      *sql.DB
-	manager ptymgr.SessionManager
+	db       *sql.DB
+	manager  ptymgr.SessionManager
+	webhooks *WebhooksHandler
 }
 
-func NewSessionsHandler(db *sql.DB, manager ptymgr.SessionManager) *SessionsHandler {
-	return &SessionsHandler{db: db, manager: manager}
+func NewSessionsHandler(db *sql.DB, manager ptymgr.SessionManager, webhooks *WebhooksHandler) *SessionsHandler {
+	return &SessionsHandler{db: db, manager: manager, webhooks: webhooks}
 }
 
 func (h *SessionsHandler) HandleList(w http.ResponseWriter, _ *http.Request) {
@@ -105,7 +106,7 @@ func (h *SessionsHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Write .mcp.json for Claude Code notepad integration
+	// Write .mcp.json for Claude Code MCP integrations
 	mcpConfig := fmt.Sprintf(`{
   "mcpServers": {
     "codeking-notepad": {
@@ -116,9 +117,18 @@ func (h *SessionsHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
         "CODEKING_SESSION_ID": "%s",
         "CODEKING_API_URL": "http://localhost:8800"
       }
+    },
+    "codeking-ui": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["/opt/superposition/mcp/a2ui-server.js"],
+      "env": {
+        "CODEKING_SESSION_ID": "%s",
+        "CODEKING_API_URL": "http://localhost:8800"
+      }
     }
   }
-}`, sessionID)
+}`, sessionID, sessionID)
 	if err := os.WriteFile(filepath.Join(worktreePath, ".mcp.json"), []byte(mcpConfig), 0644); err != nil {
 		log.Printf("Failed to write .mcp.json for session %s: %v", sessionID, err)
 	}
@@ -142,11 +152,17 @@ func (h *SessionsHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 		VALUES (?, ?, ?, ?, ?, 'running', ?, ?)`,
 		sessionID, body.RepoID, worktreePath, body.NewBranch, body.CLIType, pid, now)
 
+	// Fire webhook for session creation
+	h.webhooks.FireWebhook("session.created", sessionID, map[string]any{
+		"repo_id": body.RepoID, "branch": body.NewBranch, "cli_type": body.CLIType,
+	})
+
 	// Monitor for process exit and update DB
 	go func() {
 		<-sess.Done()
 		h.db.Exec(`UPDATE sessions SET status = 'stopped' WHERE id = ?`, sessionID)
 		log.Printf("Session %s stopped", sessionID)
+		h.webhooks.FireWebhook("session.stopped", sessionID, nil)
 	}()
 
 	WriteJSON(w, http.StatusCreated, models.Session{

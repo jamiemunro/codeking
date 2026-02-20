@@ -40,9 +40,9 @@ AI development workspace — not just a terminal wrapper. Worktree-isolated Clau
 ## Phase 4 — Integrations
 
 - [ ] Google Docs integration (read/write docs as context for Claude)
-- [ ] A2UI renderer panel (Claude sends declarative UI, rendered alongside terminal)
-- [ ] Rich previews for generated frontend components
-- [ ] Webhook/notification support (session events → Slack, email)
+- [x] A2UI renderer panel (Claude sends declarative UI, rendered alongside terminal)
+- [x] Rich previews for generated frontend components (via A2UI elements: code, table, image)
+- [x] Webhook/notification support (session events → Slack, email)
 
 ## Phase 5 — Orchestrator / Dashboard Terminal
 

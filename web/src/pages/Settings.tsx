@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../lib/api";
 import { useToast } from "../components/Toast";
+import WebhookManager from "../components/WebhookManager";
 
 export default function Settings() {
   const [pat, setPat] = useState("");
@@ -68,6 +69,18 @@ export default function Settings() {
         >
           Save
         </button>
+      </div>
+
+      <div className="h-px bg-zinc-800 my-8" />
+
+      <div className="space-y-6">
+        <div>
+          <h3 className="text-lg font-medium mb-2">Webhooks</h3>
+          <p className="text-sm text-zinc-400 mb-4">
+            Receive HTTP notifications when session events occur.
+          </p>
+          <WebhookManager />
+        </div>
       </div>
 
       <div className="h-px bg-zinc-800 my-8" />

@@ -9,10 +9,11 @@ import SplitPane from "../components/SplitPane";
 import FileUpload from "../components/FileUpload";
 import FileBrowser from "../components/FileBrowser";
 import MCPConfig from "../components/MCPConfig";
+import A2UIPanel from "../components/A2UIPanel";
 import { useIdleMonitor } from "../components/IdleMonitorContext";
 import { useToast } from "../components/Toast";
 
-type RightPanel = "notes" | "files" | "mcp" | null;
+type RightPanel = "notes" | "files" | "mcp" | "ui" | null;
 
 interface SessionInfo {
   id: string;
@@ -35,14 +36,14 @@ export default function Sessions() {
   const [showModal, setShowModal] = useState(false);
   const [rightPanel, setRightPanel] = useState<RightPanel>(() => {
     const saved = localStorage.getItem("codeking:rightPanel");
-    if (saved === "notes" || saved === "files" || saved === "mcp") return saved;
+    if (saved === "notes" || saved === "files" || saved === "mcp" || saved === "ui") return saved;
     return null;
   });
   const { idleSessions } = useIdleMonitor();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const togglePanel = useCallback((panel: "notes" | "files" | "mcp") => {
+  const togglePanel = useCallback((panel: "notes" | "files" | "mcp" | "ui") => {
     setRightPanel((prev) => {
       const next = prev === panel ? null : panel;
       localStorage.setItem("codeking:rightPanel", next ?? "");
@@ -286,6 +287,33 @@ export default function Sessions() {
                   />
                 </svg>
               </button>
+              <button
+                onClick={() => togglePanel("ui")}
+                className={`shrink-0 px-2 py-1.5 rounded transition-colors ${
+                  rightPanel === "ui"
+                    ? "text-blue-400 hover:text-blue-300 bg-zinc-800/60"
+                    : "text-zinc-400 hover:text-white hover:bg-zinc-800/60"
+                }`}
+                title={
+                  rightPanel === "ui"
+                    ? "Hide agent UI"
+                    : "Show agent UI"
+                }
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z"
+                  />
+                </svg>
+              </button>
             </>
           )}
 
@@ -421,6 +449,8 @@ export default function Sessions() {
                       <NotePad sessionId={activeTab} />
                     ) : rightPanel === "files" ? (
                       <FileBrowser sessionId={activeTab} />
+                    ) : rightPanel === "ui" ? (
+                      <A2UIPanel sessionId={activeTab} />
                     ) : (
                       <MCPConfig sessionId={activeTab} />
                     )
