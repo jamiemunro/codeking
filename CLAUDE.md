@@ -80,7 +80,7 @@ cd web && npx prettier --write "src/**/*.{ts,tsx,css}"
 
 | Service | Systemd unit | Port | Notes |
 |---------|-------------|------|-------|
-| Superposition | `superposition.service` | 8800 | Binary at `/opt/superposition/superposition` |
+| Superposition | `superposition.service` | 8800 | Binary at `/opt/superposition/superposition`, `KillMode=process` so shepherd survives restarts |
 | Caddy | `caddy.service` | 443/80 | Reverse proxy, auto-TLS, basic auth |
 | ttyd | `ttyd.service` | 7681 | Web terminal at `/terminal/` |
 
