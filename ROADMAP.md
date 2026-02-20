@@ -47,3 +47,28 @@ A persistent "control plane" terminal on the dashboard that manages and coordina
 - [ ] Session output tailing: orchestrator can pull recent output from any session without switching tabs
 - [ ] Workflow scripts: user-defined multi-step workflows (e.g. "deploy staging" = build + test + push + restart)
 - [ ] Event-driven triggers: orchestrator reacts to session events (idle, error, completion) and can take action
+
+## Phase 6 — Live Preview & Browser Automation
+
+Embed running apps directly in the Codeking UI. Sessions spawn dev servers, Codeking proxies them, and you see the live product next to the terminal. Combined with headless browser automation, Claude can build, preview, and design-test in a closed loop.
+
+### Live Preview
+- [ ] Port proxy: Go backend reverse-proxies session dev server ports via `/preview/{sessionId}/`
+- [ ] WebSocket proxy for HMR/live reload passthrough
+- [ ] Port detection: parse PTY output for "localhost:NNNN" patterns, or manual config per session
+- [ ] Split-pane UI: terminal + iframe preview side by side (resizable)
+- [ ] Preview toolbar: URL bar, refresh, viewport size presets (mobile/tablet/desktop)
+- [ ] Multi-port support: some projects run frontend + API on different ports
+
+### Browser Automation
+- [ ] Headless Chrome + Playwright installed on server
+- [ ] MCP tool for Claude sessions to drive the browser (navigate, click, screenshot, assert)
+- [ ] Screenshot streaming: render screenshots inline in the Codeking UI (not just terminal)
+- [ ] Visual regression: compare screenshots before/after changes, flag differences
+- [ ] Design feedback loop: Claude edits code → HMR reloads → Playwright screenshots → Claude evaluates the result
+
+### Design Testing
+- [ ] Responsive testing: automated screenshot matrix across viewport sizes
+- [ ] Component isolation: preview individual components via Storybook-style URLs
+- [ ] Accessibility audit: run axe-core via Playwright, surface issues in the UI
+- [ ] User flow testing: Claude can script multi-page interactions and verify outcomes
