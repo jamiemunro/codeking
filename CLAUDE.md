@@ -88,6 +88,11 @@ cd web && npx prettier --write "src/**/*.{ts,tsx,css}"
 
 Run SSH commands in **separate small steps** — long chains drop the connection.
 
+**CRITICAL: Do NOT kill shepherd during deploys.** Shepherd is designed to survive server
+restarts. It runs as an independent process (Setsid, detached). The new server process
+reconnects to the existing shepherd via Unix socket, and `reconcileSessions()` re-adopts
+all alive sessions. Active PTY sessions, replay buffers, and browser connections all survive.
+
 ```bash
 # 1. Push from local
 git push origin main
@@ -98,24 +103,23 @@ ssh root@46.225.118.71 'cd /opt/superposition && git pull && cd web && npm insta
 # 3. Build Go binary (go is not in default PATH for non-interactive SSH)
 ssh root@46.225.118.71 'export PATH=$PATH:/usr/local/go/bin && cd /opt/superposition && CGO_ENABLED=1 go build -o superposition .'
 
-# 4. Kill shepherd only if it's running (pkill -f shepherd can kill the SSH session if no match)
-ssh root@46.225.118.71 'pgrep -f shepherd && pkill -f shepherd || true'
-
-# 5. Restart service
+# 4. Restart service (shepherd stays alive — sessions survive)
 ssh root@46.225.118.71 'systemctl restart superposition'
 
-# 6. Verify
+# 5. Verify
 ssh root@46.225.118.71 'systemctl is-active superposition'
 curl -s -o /dev/null -w "%{http_code}" https://codeking.isolater.app/  # 401 = OK (behind basic auth)
 ```
 
 ### Deploy rules
 
+- **NEVER kill shepherd** unless you changed code in `internal/shepherd/`. Killing shepherd
+  destroys all active PTY sessions. The whole point of shepherd is session survival across deploys.
 - **Go PATH:** Non-interactive SSH doesn't load shell profile. Always prepend `export PATH=$PATH:/usr/local/go/bin` before `go` commands.
 - **Small SSH steps:** Don't chain all commands in one SSH call — the connection drops on long-running builds. Use separate `ssh` invocations per step.
-- **Shepherd kill:** Only `pkill -f shepherd` if `pgrep` confirms it's running. A failed `pkill` can exit non-zero and break chains, or match unintended processes.
 - **Health check:** `curl` returns 401 (Caddy basic auth) — that means the server is up. A 5xx or connection refused means something is wrong.
-- **Frontend-only changes:** If only `web/` files changed, skip steps 3-4 (Go build and shepherd kill). Just build frontend and restart.
+- **Frontend-only changes:** If only `web/` files changed, skip steps 3-4 (Go build). Just build frontend and restart.
+- **Shepherd code changes only:** If `internal/shepherd/` was modified, kill shepherd after building: `ssh root@... 'pgrep -f shepherd && pkill -f shepherd || true'`, then restart. Accept that active sessions will be lost.
 
 ### Auth
 
