@@ -286,12 +286,7 @@ func (h *ReposHandler) cloneRepo(id int64, cloneURL, owner, name string) {
 		return
 	}
 
-	// Get default branch
-	defaultBranch := "main"
-	branches, err := git.ListBranches(localPath)
-	if err == nil && len(branches) > 0 {
-		defaultBranch = branches[0]
-	}
+	defaultBranch := detectDefaultBranch(localPath)
 
 	now := time.Now()
 	h.db.Exec(`UPDATE repositories SET local_path = ?, clone_status = 'ready', default_branch = ?, last_synced = ? WHERE id = ?`,
@@ -307,16 +302,31 @@ func (h *ReposHandler) cloneLocalRepo(id int64, sourcePath, name string) {
 		return
 	}
 
-	defaultBranch := "main"
-	branches, err := git.ListBranches(localPath)
-	if err == nil && len(branches) > 0 {
-		defaultBranch = branches[0]
-	}
+	defaultBranch := detectDefaultBranch(localPath)
 
 	now := time.Now()
 	h.db.Exec(`UPDATE repositories SET local_path = ?, clone_status = 'ready', default_branch = ?, last_synced = ? WHERE id = ?`,
 		localPath, defaultBranch, now, id)
 	log.Printf("Cloned local repo %s to %s", sourcePath, localPath)
+}
+
+// detectDefaultBranch finds "main" or "master" from branches, falling back to first available.
+func detectDefaultBranch(barePath string) string {
+	branches, err := git.ListBranches(barePath)
+	if err != nil || len(branches) == 0 {
+		return "main"
+	}
+	for _, b := range branches {
+		if b == "main" {
+			return "main"
+		}
+	}
+	for _, b := range branches {
+		if b == "master" {
+			return "master"
+		}
+	}
+	return branches[0]
 }
 
 func (h *ReposHandler) getPAT() string {

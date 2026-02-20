@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { api } from "../lib/api";
 
 interface Repo {
@@ -26,6 +26,12 @@ export default function NewSessionModal({ open, onClose, onCreated }: Props) {
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const autoBranchName = useMemo(() => {
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `session/${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}`;
+  }, [open]); // regenerate each time modal opens
   const [cliOverrides, setCliOverrides] = useState<Record<string, string>>({});
   const [editingOverride, setEditingOverride] = useState<string | null>(null);
   const [overrideInput, setOverrideInput] = useState("");
@@ -62,12 +68,18 @@ export default function NewSessionModal({ open, onClose, onCreated }: Props) {
       api.getRepoBranches(repoId).then((b) => {
         setBranches(b);
         const repo = repos.find((r) => r.id === repoId);
-        const defaultBranch = repo?.default_branch || b[0] || "main";
+        const preferred = repo?.default_branch;
+        const defaultBranch =
+          (preferred && b.includes(preferred) ? preferred : null) ||
+          (b.includes("main") ? "main" : null) ||
+          (b.includes("master") ? "master" : null) ||
+          b[0] ||
+          "main";
         setSourceBranch(defaultBranch);
-        setNewBranch("");
+        setNewBranch(autoBranchName);
       });
     }
-  }, [repoId]);
+  }, [repoId, repos]);
 
   if (!open) return null;
 

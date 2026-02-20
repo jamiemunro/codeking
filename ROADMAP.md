@@ -8,22 +8,31 @@ AI development workspace — not just a terminal wrapper. Worktree-isolated Clau
 
 - [x] Terminal theme/readability (font, colors, contrast, spacing)
 - [x] Better session cards (status indicators, elapsed time, last activity)
+- [x] Auto-generated branch names (session/YYYY-MM-DD-HHMM)
+- [x] Source branch defaults to main/master
 - [ ] Session naming and search
 - [ ] Responsive layout improvements
 - [x] Remove/rebrand Superposition references → Codeking
 
 ## Phase 2 — Living document
 
-- [ ] Split-pane layout: terminal + markdown editor side by side
-- [ ] Shared notepad per session — both user and Claude can read/write
-- [ ] MCP tool for Claude to read/write the notepad
-- [ ] Persistent across session restarts
+- [x] Split-pane layout: terminal + markdown editor side by side
+- [x] Shared notepad per session — both user and Claude can read/write
+- [x] MCP tool for Claude to read/write the notepad
+- [x] Persistent across session restarts
 - [ ] Export/import notes as markdown
+
+## Phase 2.5 — File upload
+
+- [ ] `POST /api/sessions/{id}/upload` endpoint — writes files to session worktree
+- [ ] Drop zone in session UI — drag & drop files/screenshots onto the session
+- [ ] File picker button for selecting files from disk
+- [ ] Upload progress indicator and file path display (so Claude can reference uploaded files)
+- [ ] Max file size limit and allowed types validation
 
 ## Phase 3 — Project workspace
 
 - [ ] File browser for the worktree (tree view, file preview)
-- [ ] File upload to worktree (seed data, config files, assets)
 - [ ] MCP configuration UI per session (add/remove/edit MCP servers)
 - [ ] Pass `--mcp-config` to Claude Code on session start
 - [ ] Session environment variable management
