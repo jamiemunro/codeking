@@ -115,4 +115,18 @@ export const api = {
       if (!res.ok) throw new Error("Failed to fetch replay");
       return res.arrayBuffer();
     }),
+
+  // Session Notes
+  getSessionNotes: (sessionId: string) =>
+    request<{ content: string; updated_at: string | null }>(
+      `/api/sessions/${sessionId}/notes`,
+    ),
+  updateSessionNotes: (sessionId: string, content: string) =>
+    request<{ content: string; updated_at: string }>(
+      `/api/sessions/${sessionId}/notes`,
+      {
+        method: "PUT",
+        body: JSON.stringify({ content }),
+      },
+    ),
 };

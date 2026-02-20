@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strconv"
 	"time"
@@ -102,6 +103,24 @@ func (h *SessionsHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 	if err := git.AddWorktree(repo.LocalPath, worktreePath, body.NewBranch, body.SourceBranch); err != nil {
 		WriteError(w, http.StatusInternalServerError, fmt.Sprintf("create worktree: %v", err))
 		return
+	}
+
+	// Write .mcp.json for Claude Code notepad integration
+	mcpConfig := fmt.Sprintf(`{
+  "mcpServers": {
+    "codeking-notepad": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["/opt/superposition/mcp/notepad-server.js"],
+      "env": {
+        "CODEKING_SESSION_ID": "%s",
+        "CODEKING_API_URL": "http://localhost:8800"
+      }
+    }
+  }
+}`, sessionID)
+	if err := os.WriteFile(filepath.Join(worktreePath, ".mcp.json"), []byte(mcpConfig), 0644); err != nil {
+		log.Printf("Failed to write .mcp.json for session %s: %v", sessionID, err)
 	}
 
 	// Resolve CLI command (may include args from settings override)

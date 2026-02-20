@@ -4,6 +4,8 @@ import { api, CodekingOfflineError } from "../lib/api";
 import Terminal from "../components/Terminal";
 import TerminalPreview from "../components/TerminalPreview";
 import NewSessionModal from "../components/NewSessionModal";
+import NotePad from "../components/NotePad";
+import SplitPane from "../components/SplitPane";
 import { useIdleMonitor } from "../components/IdleMonitorContext";
 
 interface SessionInfo {
@@ -25,7 +27,18 @@ export default function Sessions() {
   const [openTabs, setOpenTabs] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<"tabs" | "grid">("tabs");
   const [showModal, setShowModal] = useState(false);
+  const [showNotepad, setShowNotepad] = useState(() => {
+    return localStorage.getItem("codeking:showNotepad") === "true";
+  });
   const { idleSessions } = useIdleMonitor();
+
+  const toggleNotepad = useCallback(() => {
+    setShowNotepad((prev) => {
+      const next = !prev;
+      localStorage.setItem("codeking:showNotepad", String(next));
+      return next;
+    });
+  }, []);
 
   const openTab = useCallback(
     (id: string) => {
@@ -183,6 +196,33 @@ export default function Sessions() {
 
           <div className="flex-1" />
 
+          {/* Notepad toggle — tab mode only */}
+          {viewMode === "tabs" && (
+            <button
+              onClick={toggleNotepad}
+              className={`shrink-0 px-2 py-1.5 rounded transition-colors ${
+                showNotepad
+                  ? "text-blue-400 hover:text-blue-300 bg-zinc-800/60"
+                  : "text-zinc-400 hover:text-white hover:bg-zinc-800/60"
+              }`}
+              title={showNotepad ? "Hide notepad" : "Show notepad"}
+            >
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
+                />
+              </svg>
+            </button>
+          )}
+
           {/* View mode toggle */}
           {openTabs.length > 1 && (
             <button
@@ -234,18 +274,46 @@ export default function Sessions() {
           )}
         </div>
 
-        {/* Tab mode: single active terminal */}
+        {/* Tab mode: single active terminal, optionally with notepad */}
         {viewMode === "tabs" && (
-          <div className="flex-1 relative">
-            {openTabs.map((id) => (
-              <div
-                key={id}
-                className="absolute inset-0 p-3"
-                style={{ display: activeTab === id ? "block" : "none" }}
-              >
-                <Terminal sessionId={id} visible={activeTab === id} />
+          <div className="flex-1 min-h-0">
+            {showNotepad ? (
+              <SplitPane
+                storageKey="codeking:notepadSplit"
+                left={
+                  <div className="relative h-full">
+                    {openTabs.map((id) => (
+                      <div
+                        key={id}
+                        className="absolute inset-0 p-3"
+                        style={{
+                          display: activeTab === id ? "block" : "none",
+                        }}
+                      >
+                        <Terminal sessionId={id} visible={activeTab === id} />
+                      </div>
+                    ))}
+                  </div>
+                }
+                right={
+                  activeTab ? <NotePad sessionId={activeTab} /> : <div />
+                }
+              />
+            ) : (
+              <div className="relative h-full">
+                {openTabs.map((id) => (
+                  <div
+                    key={id}
+                    className="absolute inset-0 p-3"
+                    style={{
+                      display: activeTab === id ? "block" : "none",
+                    }}
+                  >
+                    <Terminal sessionId={id} visible={activeTab === id} />
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
           </div>
         )}
 

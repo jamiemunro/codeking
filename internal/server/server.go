@@ -38,6 +38,7 @@ func (s *Server) routes(spaHandler http.Handler) {
 	settings := api.NewSettingsHandler(s.db)
 	repos := api.NewReposHandler(s.db)
 	sessions := api.NewSessionsHandler(s.db, s.PtyMgr)
+	notes := api.NewNotesHandler(s.db)
 	wsHandler := ws.NewHandler(s.PtyMgr)
 
 	// Health
@@ -64,6 +65,10 @@ func (s *Server) routes(spaHandler http.Handler) {
 	s.mux.HandleFunc("POST /api/sessions", sessions.HandleCreate)
 	s.mux.HandleFunc("GET /api/sessions/{id}/replay", sessions.HandleReplay)
 	s.mux.HandleFunc("DELETE /api/sessions/{id}", sessions.HandleDelete)
+
+	// Session Notes
+	s.mux.HandleFunc("GET /api/sessions/{id}/notes", notes.HandleGet)
+	s.mux.HandleFunc("PUT /api/sessions/{id}/notes", notes.HandlePut)
 
 	// WebSocket
 	s.mux.Handle("GET /ws/session/{id}", wsHandler)
