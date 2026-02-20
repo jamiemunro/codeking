@@ -1,9 +1,9 @@
 const BASE = "";
 
-export class SuperpositionOfflineError extends Error {
+export class CodekingOfflineError extends Error {
   constructor() {
-    super("Superposition is offline");
-    this.name = "SuperpositionOfflineError";
+    super("Codeking is offline");
+    this.name = "CodekingOfflineError";
   }
 }
 
@@ -15,14 +15,14 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
       ...options,
     });
   } catch {
-    throw new SuperpositionOfflineError();
+    throw new CodekingOfflineError();
   }
   if (res.status === 401) {
     window.location.href = "/auth/login";
     throw new Error("Unauthorized");
   }
   if (res.status === 502) {
-    throw new SuperpositionOfflineError();
+    throw new CodekingOfflineError();
   }
   if (res.status === 204) return undefined as T;
   const text = await res.text();
@@ -30,7 +30,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   try {
     data = JSON.parse(text);
   } catch {
-    throw new SuperpositionOfflineError();
+    throw new CodekingOfflineError();
   }
   if (!res.ok) throw new Error(data.error || "Request failed");
   return data;

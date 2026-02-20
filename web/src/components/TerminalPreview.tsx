@@ -65,7 +65,7 @@ export default function TerminalPreview({ sessionId }: TerminalPreviewProps) {
   return (
     <div
       ref={containerRef}
-      className="w-full h-[150px] rounded overflow-hidden pointer-events-none"
+      className="w-full h-[200px] rounded overflow-hidden pointer-events-none"
     />
   );
 }

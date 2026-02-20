@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { api, SuperpositionOfflineError } from "../lib/api";
+import { api, CodekingOfflineError } from "../lib/api";
 import Terminal from "../components/Terminal";
 import TerminalPreview from "../components/TerminalPreview";
 import NewSessionModal from "../components/NewSessionModal";
@@ -42,7 +42,7 @@ export default function Sessions() {
       setSessions(data);
       pollDelayRef.current = 5_000;
     } catch (e) {
-      if (e instanceof SuperpositionOfflineError) {
+      if (e instanceof CodekingOfflineError) {
         pollDelayRef.current = 30_000;
       } else {
         console.error(e);
@@ -185,7 +185,7 @@ export default function Sessions() {
           {openTabs.map((id) => (
             <div
               key={id}
-              className="absolute inset-0 p-1"
+              className="absolute inset-0 p-3"
               style={{ display: activeTab === id ? "block" : "none" }}
             >
               <Terminal sessionId={id} visible={activeTab === id} />
@@ -265,6 +265,23 @@ export default function Sessions() {
   );
 }
 
+function timeAgo(dateStr: string): string {
+  const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
+  if (seconds < 60) return "just now";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ${minutes % 60}m ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
+const cliBadgeColors: Record<string, string> = {
+  claude: "bg-blue-500/20 text-blue-300 border-blue-500/30",
+  codex: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
+  gemini: "bg-purple-500/20 text-purple-300 border-purple-500/30",
+};
+
 function SessionCard({
   session,
   idle,
@@ -277,27 +294,40 @@ function SessionCard({
   onDelete: () => void;
 }) {
   const running = session.status === "running";
+  const badgeColor =
+    cliBadgeColors[session.cli_type.toLowerCase()] ??
+    "bg-zinc-500/20 text-zinc-300 border-zinc-500/30";
   return (
-    <div className="p-4 rounded-lg border border-zinc-800 bg-zinc-900">
+    <div className="p-4 rounded-lg border border-zinc-800 bg-zinc-900" data-session-id={session.id}>
       <div className="flex items-start gap-3 justify-between mb-2">
         <div>
           <p className="font-medium text-sm break-all">
             {session.repo_owner}/{session.repo_name}
           </p>
           <p className="text-xs text-zinc-500 break-all">
-            {session.branch} &middot; {session.cli_type} &middot; {session.id}
+            {session.branch}
           </p>
         </div>
-        <div
-          className={`w-2.5 h-2.5 rounded-full mt-1 ${
-            !running
-              ? "bg-zinc-600"
-              : idle
-                ? "bg-amber-500 animate-pulse"
-                : "bg-emerald-500"
-          }`}
-        />
+        <div className="flex items-center gap-2 shrink-0">
+          <span
+            className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full border ${badgeColor}`}
+          >
+            {session.cli_type}
+          </span>
+          <div
+            className={`w-2.5 h-2.5 rounded-full ${
+              !running
+                ? "bg-zinc-600"
+                : idle
+                  ? "bg-amber-500 animate-pulse"
+                  : "bg-emerald-500"
+            }`}
+          />
+        </div>
       </div>
+      <p className="text-[11px] text-zinc-500 mb-2">
+        {running ? "Running for " : "Created "}{timeAgo(session.created_at)}
+      </p>
       {running && (
         <div
           className="mt-2 cursor-pointer rounded overflow-hidden border border-zinc-800"

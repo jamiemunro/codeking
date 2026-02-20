@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
-import { api, SuperpositionOfflineError } from "../lib/api";
+import { api, CodekingOfflineError } from "../lib/api";
 
 interface LocalRepo {
   id: number;
@@ -43,7 +43,7 @@ export default function Repositories() {
       setLocalRepos(data);
       pollDelayRef.current = 3_000;
     } catch (e) {
-      if (e instanceof SuperpositionOfflineError) {
+      if (e instanceof CodekingOfflineError) {
         pollDelayRef.current = 30_000;
       } else {
         console.error(e);

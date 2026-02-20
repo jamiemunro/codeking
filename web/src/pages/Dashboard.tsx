@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { api, SuperpositionOfflineError } from "../lib/api";
+import { api, CodekingOfflineError } from "../lib/api";
 
 interface CLIStatus {
   name: string;
@@ -23,7 +23,7 @@ export default function Dashboard() {
       .health()
       .then(setHealth)
       .catch((e) => {
-        if (e instanceof SuperpositionOfflineError) {
+        if (e instanceof CodekingOfflineError) {
           setOffline(true);
         } else {
           console.error(e);

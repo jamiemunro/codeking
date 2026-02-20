@@ -210,13 +210,32 @@ export default function Terminal({ sessionId, visible = true }: TerminalProps) {
 
     const term = new XTerm({
       cursorBlink: true,
-      fontSize: 14,
+      fontSize: 15,
+      lineHeight: 1.5,
       fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace",
       theme: {
-        background: "#09090b",
-        foreground: "#fafafa",
-        cursor: "#fafafa",
+        background: "#0a0a0f",
+        foreground: "#e4e4e7",
+        cursor: "#60a5fa",
+        cursorAccent: "#0a0a0f",
         selectionBackground: "#3f3f46",
+        selectionForeground: "#fafafa",
+        black: "#27272a",
+        red: "#f87171",
+        green: "#4ade80",
+        yellow: "#facc15",
+        blue: "#60a5fa",
+        magenta: "#c084fc",
+        cyan: "#22d3ee",
+        white: "#e4e4e7",
+        brightBlack: "#52525b",
+        brightRed: "#fca5a5",
+        brightGreen: "#86efac",
+        brightYellow: "#fde68a",
+        brightBlue: "#93c5fd",
+        brightMagenta: "#d8b4fe",
+        brightCyan: "#67e8f9",
+        brightWhite: "#fafafa",
       },
       allowProposedApi: true,
     });
@@ -290,7 +309,7 @@ export default function Terminal({ sessionId, visible = true }: TerminalProps) {
       className="h-full flex flex-col"
       style={{ display: visible ? "flex" : "none" }}
     >
-      <div ref={containerRef} className="flex-1 min-h-0" />
+      <div ref={containerRef} className="flex-1 min-h-0 p-2" />
       {isTouch && <VirtualKeybar onKey={sendInput} />}
     </div>
   );

@@ -111,7 +111,7 @@ function NotificationRequest() {
         <button
           onClick={() =>
             navigator.serviceWorker?.ready.then((reg) =>
-              reg.showNotification("Superposition", {
+              reg.showNotification("Codeking", {
                 body: "Test notification",
               }),
             )

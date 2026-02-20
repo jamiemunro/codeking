@@ -54,9 +54,9 @@ export default function Layout() {
           <div className="flex items-start justify-between gap-3">
             <div>
               <h1 className="text-lg font-bold tracking-tight">
-                Superposition
+                Codeking
               </h1>
-              <p className="text-xs text-zinc-500">AI Coding Sessions</p>
+              <p className="text-xs text-zinc-500">AI Development Workspace</p>
             </div>
             <button
               type="button"
@@ -138,17 +138,17 @@ export default function Layout() {
           </button>
           <div>
             <h1 className="text-sm font-semibold tracking-wide">
-              Superposition
+              Codeking
             </h1>
             <p className="text-[11px] leading-tight text-zinc-500">
-              AI Coding Sessions
+              AI Development Workspace
             </p>
           </div>
         </header>
 
         {connectionStatus === "offline" && (
           <div className="px-4 py-2 bg-amber-600/20 border-b border-amber-700/50 text-amber-300 text-sm text-center">
-            Superposition is offline — your laptop may be asleep or
+            Codeking is offline — your laptop may be asleep or
             disconnected.
           </div>
         )}
