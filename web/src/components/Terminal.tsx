@@ -119,6 +119,10 @@ export default function Terminal({ sessionId, visible = true }: TerminalProps) {
   const disposed = useRef(false);
   const onDataDisposable = useRef<IDisposable | null>(null);
   const isTouch = useIsTouchDevice();
+  const [connState, setConnState] = useState<
+    "connecting" | "connected" | "reconnecting" | "ended"
+  >("connecting");
+  const [attempts, setAttempts] = useState(0);
 
   const sendInput = useCallback((data: string) => {
     const ws = wsRef.current;
@@ -140,6 +144,8 @@ export default function Terminal({ sessionId, visible = true }: TerminalProps) {
 
       ws.onopen = () => {
         reconnectDelay.current = RECONNECT_DELAY;
+        setConnState("connected");
+        setAttempts(0);
         ws.send(
           JSON.stringify({
             type: "resize",
@@ -161,21 +167,12 @@ export default function Terminal({ sessionId, visible = true }: TerminalProps) {
       ws.onclose = (e) => {
         if (disposed.current) return;
         if (e.code === 1000) {
-          try {
-            term.write("\r\n\x1b[90m[Session ended]\x1b[0m\r\n");
-          } catch (err) {
-            console.error("terminal write error on session end:", err);
-          }
+          setConnState("ended");
           return;
         }
-        // Reconnect
-        try {
-          term.write("\r\n\x1b[33m[Reconnecting...]\x1b[0m\r\n");
-        } catch (err) {
-          console.error("terminal write error on reconnect:", err);
-        }
+        setConnState("reconnecting");
+        setAttempts((prev) => prev + 1);
         reconnectTimer.current = setTimeout(() => {
-          // Clear terminal before replay to avoid duplication
           try {
             term.clear();
           } catch (err) {
@@ -204,13 +201,29 @@ export default function Terminal({ sessionId, visible = true }: TerminalProps) {
     [sessionId],
   );
 
+  const manualReconnect = useCallback(() => {
+    clearTimeout(reconnectTimer.current);
+    reconnectDelay.current = RECONNECT_DELAY;
+    setAttempts(0);
+    setConnState("connecting");
+    const term = termRef.current;
+    if (term) {
+      try {
+        term.clear();
+      } catch {
+        /* ignore */
+      }
+      connect(term);
+    }
+  }, [connect]);
+
   useEffect(() => {
     if (!containerRef.current) return;
     disposed.current = false;
 
     const term = new XTerm({
       cursorBlink: true,
-      fontSize: 15,
+      fontSize: 10,
       lineHeight: 1.5,
       fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace",
       theme: {
@@ -306,10 +319,51 @@ export default function Terminal({ sessionId, visible = true }: TerminalProps) {
 
   return (
     <div
-      className="h-full flex flex-col"
+      className="h-full flex flex-col relative"
       style={{ display: visible ? "flex" : "none" }}
     >
       <div ref={containerRef} className="flex-1 min-h-0 p-2" />
+      {connState !== "connected" && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/70 z-10">
+          <div className="text-center">
+            {connState === "connecting" && (
+              <div className="text-zinc-400 text-sm">Connecting...</div>
+            )}
+            {connState === "reconnecting" && (
+              <>
+                <div className="text-amber-400 text-sm mb-1">
+                  Reconnecting
+                  {attempts > 1 ? ` (attempt ${attempts})` : ""}...
+                </div>
+                {attempts >= 3 && (
+                  <p className="text-zinc-500 text-xs mb-3">
+                    Server may be restarting
+                  </p>
+                )}
+                <button
+                  onClick={manualReconnect}
+                  className="text-xs text-blue-400 hover:text-blue-300 px-3 py-1.5 rounded border border-zinc-700 hover:border-blue-700 transition-colors"
+                >
+                  Retry now
+                </button>
+              </>
+            )}
+            {connState === "ended" && (
+              <>
+                <div className="text-zinc-400 text-sm mb-3">
+                  Session ended
+                </div>
+                <button
+                  onClick={manualReconnect}
+                  className="text-xs text-blue-400 hover:text-blue-300 px-3 py-1.5 rounded border border-zinc-700 hover:border-blue-700 transition-colors"
+                >
+                  Reconnect
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
       {isTouch && <VirtualKeybar onKey={sendInput} />}
     </div>
   );

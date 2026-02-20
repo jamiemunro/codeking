@@ -23,6 +23,7 @@ export default function Sessions() {
   const activeTab = sessionId ?? null;
   const [sessions, setSessions] = useState<SessionInfo[]>([]);
   const [openTabs, setOpenTabs] = useState<string[]>([]);
+  const [viewMode, setViewMode] = useState<"tabs" | "grid">("tabs");
   const [showModal, setShowModal] = useState(false);
   const { idleSessions } = useIdleMonitor();
 
@@ -114,11 +115,11 @@ export default function Sessions() {
   const runningSessions = sessions.filter((s) => s.status === "running");
   const stoppedSessions = sessions.filter((s) => s.status !== "running");
 
-  // Tab workspace view
+  // Tab/Grid workspace view
   if (activeTab) {
     return (
       <div className="flex flex-col h-full min-h-0">
-        {/* Tab bar */}
+        {/* Header bar */}
         <div className="sticky top-0 z-20 flex items-center gap-1 border-b border-zinc-800 bg-zinc-900/90 px-1.5 py-1 overflow-x-auto backdrop-blur">
           <button
             onClick={() => {
@@ -129,48 +130,101 @@ export default function Sessions() {
           >
             &larr;
           </button>
-          {openTabs.map((id) => {
-            const session = sessions.find((s) => s.id === id);
-            const isActive = activeTab === id;
-            const isIdle = idleSessions.has(id);
-            return (
-              <div
-                key={id}
-                className={`flex items-center gap-1 shrink-0 max-w-[18rem] md:max-w-none border-r border-zinc-800 ${
-                  isActive
-                    ? "bg-zinc-950"
-                    : "bg-zinc-900/50 hover:bg-zinc-800/50"
-                }`}
-              >
-                <button
-                  onClick={() => navigate(`/sessions/${id}`)}
-                  className={`flex items-center gap-1.5 min-w-0 px-3 py-2.5 text-sm md:text-xs transition-colors ${
-                    isActive ? "text-white" : "text-zinc-400"
+
+          {/* Tabs - only shown in tab mode */}
+          {viewMode === "tabs" &&
+            openTabs.map((id) => {
+              const session = sessions.find((s) => s.id === id);
+              const isActive = activeTab === id;
+              const isIdle = idleSessions.has(id);
+              return (
+                <div
+                  key={id}
+                  className={`flex items-center gap-1 shrink-0 max-w-[18rem] md:max-w-none border-r border-zinc-800 ${
+                    isActive
+                      ? "bg-zinc-950"
+                      : "bg-zinc-900/50 hover:bg-zinc-800/50"
                   }`}
                 >
-                  {isIdle && !isActive && (
-                    <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-                  )}
-                  <span className="truncate">
-                    {session
-                      ? `${session.repo_name}/${session.branch} (${session.cli_type})`
-                      : id}
-                  </span>
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    closeTab(id);
-                  }}
-                  className="shrink-0 text-zinc-600 hover:text-zinc-300 px-2 py-2 text-base md:text-sm"
-                >
-                  &times;
-                </button>
-              </div>
-            );
-          })}
+                  <button
+                    onClick={() => navigate(`/sessions/${id}`)}
+                    className={`flex items-center gap-1.5 min-w-0 px-3 py-2.5 text-sm md:text-xs transition-colors ${
+                      isActive ? "text-white" : "text-zinc-400"
+                    }`}
+                  >
+                    {isIdle && !isActive && (
+                      <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                    )}
+                    <span className="truncate">
+                      {session
+                        ? `${session.repo_name}/${session.branch} (${session.cli_type})`
+                        : id}
+                    </span>
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      closeTab(id);
+                    }}
+                    className="shrink-0 text-zinc-600 hover:text-zinc-300 px-2 py-2 text-base md:text-sm"
+                  >
+                    &times;
+                  </button>
+                </div>
+              );
+            })}
+
+          {/* Grid mode label */}
+          {viewMode === "grid" && (
+            <span className="text-xs text-zinc-400 px-2">
+              {openTabs.length} session{openTabs.length !== 1 ? "s" : ""}
+            </span>
+          )}
+
           <div className="flex-1" />
-          {activeTab && (
+
+          {/* View mode toggle */}
+          {openTabs.length > 1 && (
+            <button
+              onClick={() =>
+                setViewMode((v) => (v === "tabs" ? "grid" : "tabs"))
+              }
+              className="shrink-0 text-zinc-400 hover:text-white px-2 py-1.5 rounded hover:bg-zinc-800/60 transition-colors"
+              title={viewMode === "tabs" ? "Grid view" : "Tab view"}
+            >
+              {viewMode === "tabs" ? (
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
+                  />
+                </svg>
+              ) : (
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M4 6h16M4 12h16M4 18h16"
+                  />
+                </svg>
+              )}
+            </button>
+          )}
+
+          {viewMode === "tabs" && activeTab && (
             <button
               onClick={() => handleDelete(activeTab)}
               className="shrink-0 text-xs text-red-400 hover:text-red-300 px-3 py-1.5 mr-1 rounded border border-zinc-700 hover:border-red-800 transition-colors"
@@ -180,18 +234,77 @@ export default function Sessions() {
           )}
         </div>
 
-        {/* Terminal area - all terminals stay mounted, CSS-hidden when inactive */}
-        <div className="flex-1 relative">
-          {openTabs.map((id) => (
-            <div
-              key={id}
-              className="absolute inset-0 p-3"
-              style={{ display: activeTab === id ? "block" : "none" }}
-            >
-              <Terminal sessionId={id} visible={activeTab === id} />
-            </div>
-          ))}
-        </div>
+        {/* Tab mode: single active terminal */}
+        {viewMode === "tabs" && (
+          <div className="flex-1 relative">
+            {openTabs.map((id) => (
+              <div
+                key={id}
+                className="absolute inset-0 p-3"
+                style={{ display: activeTab === id ? "block" : "none" }}
+              >
+                <Terminal sessionId={id} visible={activeTab === id} />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Grid mode: all terminals visible */}
+        {viewMode === "grid" && (
+          <div
+            className="flex-1 grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-2 p-2 overflow-hidden"
+            style={{ gridAutoRows: "minmax(0, 1fr)" }}
+          >
+            {openTabs.map((id) => {
+              const session = sessions.find((s) => s.id === id);
+              const isIdle = idleSessions.has(id);
+              return (
+                <div
+                  key={id}
+                  className="flex flex-col min-h-0 border border-zinc-800 rounded-lg overflow-hidden"
+                >
+                  <div className="flex items-center justify-between px-3 py-1.5 bg-zinc-900 border-b border-zinc-800 shrink-0">
+                    <div className="flex items-center gap-2 min-w-0">
+                      {isIdle && (
+                        <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
+                      )}
+                      <button
+                        onClick={() => {
+                          setViewMode("tabs");
+                          navigate(`/sessions/${id}`);
+                        }}
+                        className="text-xs text-zinc-300 hover:text-white truncate"
+                        title="Focus in tab view"
+                      >
+                        {session
+                          ? `${session.repo_name}/${session.branch}`
+                          : id}
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0 ml-2">
+                      <button
+                        onClick={() => handleDelete(id)}
+                        className="text-zinc-600 hover:text-red-400 text-xs px-1 transition-colors"
+                        title="Stop session"
+                      >
+                        Stop
+                      </button>
+                      <button
+                        onClick={() => closeTab(id)}
+                        className="text-zinc-600 hover:text-zinc-300 text-sm px-1"
+                      >
+                        &times;
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex-1 min-h-0">
+                    <Terminal sessionId={id} visible />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     );
   }

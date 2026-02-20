@@ -86,20 +86,36 @@ cd web && npx prettier --write "src/**/*.{ts,tsx,css}"
 
 ### Deploy workflow
 
+Run SSH commands in **separate small steps** — long chains drop the connection.
+
 ```bash
-# On local machine
-cd ~/superposition
+# 1. Push from local
 git push origin main
 
-# On server
-ssh root@46.225.118.71
-cd /opt/superposition
-git pull
-cd web && npm install && npm run build && cd ..
-CGO_ENABLED=1 go build -o superposition .
-pkill -f shepherd  # kill old shepherd so it restarts clean
-systemctl restart superposition
+# 2. Pull and build frontend
+ssh root@46.225.118.71 'cd /opt/superposition && git pull && cd web && npm install && npm run build'
+
+# 3. Build Go binary (go is not in default PATH for non-interactive SSH)
+ssh root@46.225.118.71 'export PATH=$PATH:/usr/local/go/bin && cd /opt/superposition && CGO_ENABLED=1 go build -o superposition .'
+
+# 4. Kill shepherd only if it's running (pkill -f shepherd can kill the SSH session if no match)
+ssh root@46.225.118.71 'pgrep -f shepherd && pkill -f shepherd || true'
+
+# 5. Restart service
+ssh root@46.225.118.71 'systemctl restart superposition'
+
+# 6. Verify
+ssh root@46.225.118.71 'systemctl is-active superposition'
+curl -s -o /dev/null -w "%{http_code}" https://codeking.isolater.app/  # 401 = OK (behind basic auth)
 ```
+
+### Deploy rules
+
+- **Go PATH:** Non-interactive SSH doesn't load shell profile. Always prepend `export PATH=$PATH:/usr/local/go/bin` before `go` commands.
+- **Small SSH steps:** Don't chain all commands in one SSH call — the connection drops on long-running builds. Use separate `ssh` invocations per step.
+- **Shepherd kill:** Only `pkill -f shepherd` if `pgrep` confirms it's running. A failed `pkill` can exit non-zero and break chains, or match unintended processes.
+- **Health check:** `curl` returns 401 (Caddy basic auth) — that means the server is up. A 5xx or connection refused means something is wrong.
+- **Frontend-only changes:** If only `web/` files changed, skip steps 3-4 (Go build and shepherd kill). Just build frontend and restart.
 
 ### Auth
 
