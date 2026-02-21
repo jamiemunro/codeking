@@ -37,13 +37,15 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (s *Server) routes(spaHandler http.Handler) {
 	settings := api.NewSettingsHandler(s.db)
 	repos := api.NewReposHandler(s.db)
-	webhooks := api.NewWebhooksHandler(s.db)
+	webhooks := api.NewWebhooksHandler(s.db, s.PtyMgr)
 	sessions := api.NewSessionsHandler(s.db, s.PtyMgr, webhooks)
 	notes := api.NewNotesHandler(s.db)
 	upload := api.NewUploadHandler(s.db)
 	files := api.NewFilesHandler(s.db)
 	envvars := api.NewEnvVarsHandler(s.db)
 	sessionUI := api.NewSessionUIHandler(s.db)
+	orchestrator := api.NewOrchestratorHandler(s.db, s.PtyMgr)
+	sessionInput := api.NewSessionInputHandler(s.PtyMgr)
 	wsHandler := ws.NewHandler(s.PtyMgr)
 
 	// Health
@@ -101,6 +103,28 @@ func (s *Server) routes(spaHandler http.Handler) {
 	s.mux.HandleFunc("PUT /api/webhooks/{id}", webhooks.HandleUpdate)
 	s.mux.HandleFunc("DELETE /api/webhooks/{id}", webhooks.HandleDelete)
 	s.mux.HandleFunc("POST /api/webhooks/{id}/test", webhooks.HandleTest)
+
+	// Workflows
+	workflows := api.NewWorkflowsHandler(s.db, s.PtyMgr)
+	s.mux.HandleFunc("GET /api/workflows", workflows.HandleList)
+	s.mux.HandleFunc("POST /api/workflows", workflows.HandleCreate)
+	s.mux.HandleFunc("DELETE /api/workflows/{id}", workflows.HandleDelete)
+	s.mux.HandleFunc("POST /api/workflows/{id}/run", workflows.HandleRun)
+
+	// Triggers
+	triggers := api.NewTriggersHandler(s.db)
+	s.mux.HandleFunc("GET /api/triggers", triggers.HandleList)
+	s.mux.HandleFunc("POST /api/triggers", triggers.HandleCreate)
+	s.mux.HandleFunc("DELETE /api/triggers/{id}", triggers.HandleDelete)
+
+	// Orchestrator
+	s.mux.HandleFunc("POST /api/orchestrator", orchestrator.HandleCreate)
+	s.mux.HandleFunc("POST /api/orchestrator/stop", orchestrator.HandleStop)
+	s.mux.HandleFunc("GET /api/orchestrator/sessions", orchestrator.HandleListSessions)
+
+	// Session Input
+	s.mux.HandleFunc("POST /api/sessions/{id}/input", sessionInput.HandleInput)
+	s.mux.HandleFunc("GET /api/sessions/{id}/tail", sessionInput.HandleTail)
 
 	// WebSocket
 	s.mux.Handle("GET /ws/session/{id}", wsHandler)

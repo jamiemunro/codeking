@@ -114,6 +114,13 @@ func main() {
 	if err := db.Migrate(database, string(migration008)); err != nil {
 		log.Fatalf("Failed to run migration 008: %v", err)
 	}
+	migration009, err := migrationsFS.ReadFile("migrations/009_orchestrator.sql")
+	if err != nil {
+		log.Fatalf("Failed to read migration 009: %v", err)
+	}
+	if err := db.Migrate(database, string(migration009)); err != nil {
+		log.Fatalf("Failed to run migration 009: %v", err)
+	}
 
 	// Preflight checks (after DB init so overrides can be read)
 	fmt.Println("Running preflight checks...")
@@ -136,6 +143,7 @@ func main() {
 
 	// Reconcile DB with shepherd's active sessions
 	reconcileSessions(database, mgr, shepherdClient)
+	reconcileOrchestratorSessions(database, mgr, shepherdClient)
 
 	// Start server
 	srv := server.New(database, cliStatus, gitOk, web.SPAHandler(), mgr)
@@ -333,6 +341,50 @@ func cleanupWorktrees(database *sql.DB) {
 			if err := gitops.RemoveWorktree(repoPath, wtPath); err != nil {
 				log.Printf("Failed to remove worktree %s: %v", wtPath, err)
 			}
+		}
+	}
+}
+
+// reconcileOrchestratorSessions reconciles orchestrator_sessions with the shepherd.
+// Same logic as reconcileSessions but for the orchestrator table.
+func reconcileOrchestratorSessions(database *sql.DB, mgr ptymgr.SessionManager, client *shepherd.Client) {
+	if client == nil {
+		database.Exec(`UPDATE orchestrator_sessions SET status = 'stopped' WHERE status = 'running'`)
+		return
+	}
+
+	activeIDs, err := client.ListSessions()
+	if err != nil {
+		database.Exec(`UPDATE orchestrator_sessions SET status = 'stopped' WHERE status = 'running'`)
+		return
+	}
+
+	activeSet := make(map[string]struct{}, len(activeIDs))
+	for _, id := range activeIDs {
+		activeSet[id] = struct{}{}
+	}
+
+	rows, err := database.Query(`SELECT id FROM orchestrator_sessions WHERE status = 'running'`)
+	if err != nil {
+		return
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			continue
+		}
+		if _, alive := activeSet[id]; alive {
+			// Re-adopt: register done channel
+			_ = client.Get(id)
+			go func(sessionID string) {
+				<-client.Done(sessionID)
+				database.Exec(`UPDATE orchestrator_sessions SET status = 'stopped' WHERE id = ?`, sessionID)
+				log.Printf("Orchestrator session %s stopped (detected via shepherd)", sessionID)
+			}(id)
+		} else {
+			database.Exec(`UPDATE orchestrator_sessions SET status = 'stopped' WHERE id = ?`, id)
 		}
 	}
 }

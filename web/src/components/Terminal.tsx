@@ -8,6 +8,7 @@ import "@xterm/xterm/css/xterm.css";
 interface TerminalProps {
   sessionId: string;
   visible?: boolean;
+  wsPath?: string;
 }
 
 const RECONNECT_DELAY = 1000;
@@ -110,7 +111,7 @@ function VirtualKeybar({ onKey }: VirtualKeybarProps) {
   );
 }
 
-export default function Terminal({ sessionId, visible = true }: TerminalProps) {
+export default function Terminal({ sessionId, visible = true, wsPath }: TerminalProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<XTerm | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
@@ -137,6 +138,11 @@ export default function Terminal({ sessionId, visible = true }: TerminalProps) {
 
   const checkSessionAlive = useCallback(async (): Promise<boolean> => {
     try {
+      if (wsPath) {
+        // Orchestrator mode — check if orchestrator is running
+        const data = await fetch("/api/orchestrator", { method: "POST" }).then(r => r.json());
+        return data.status === "running";
+      }
       const sessions = await fetch("/api/sessions").then((r) => r.json());
       const match = sessions.find(
         (s: { id: string; status: string }) => s.id === sessionId,
@@ -146,7 +152,7 @@ export default function Terminal({ sessionId, visible = true }: TerminalProps) {
       // Server unreachable — might still be restarting
       return true;
     }
-  }, [sessionId]);
+  }, [sessionId, wsPath]);
 
   const connect = useCallback(
     (term: XTerm) => {
@@ -155,7 +161,7 @@ export default function Terminal({ sessionId, visible = true }: TerminalProps) {
       let opened = false;
       const proto = location.protocol === "https:" ? "wss:" : "ws:";
       const ws = new WebSocket(
-        `${proto}//${location.host}/ws/session/${sessionId}`,
+        `${proto}//${location.host}${wsPath ?? `/ws/session/${sessionId}`}`,
       );
       ws.binaryType = "arraybuffer";
       wsRef.current = ws;
@@ -234,7 +240,7 @@ export default function Terminal({ sessionId, visible = true }: TerminalProps) {
         }
       });
     },
-    [sessionId, checkSessionAlive],
+    [sessionId, wsPath, checkSessionAlive],
   );
 
   const scheduleReconnect = useCallback(
@@ -362,7 +368,7 @@ export default function Terminal({ sessionId, visible = true }: TerminalProps) {
       wsRef.current?.close();
       term.dispose();
     };
-  }, [sessionId, connect]);
+  }, [sessionId, wsPath, connect]);
 
   // Re-fit when visibility changes
   useEffect(() => {

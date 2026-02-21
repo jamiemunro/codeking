@@ -11,15 +11,19 @@ import (
 	"log"
 	"net/http"
 	neturl "net/url"
+	"strings"
 	"time"
+
+	ptymgr "github.com/peterje/superposition/internal/pty"
 )
 
 type WebhooksHandler struct {
-	db *sql.DB
+	db      *sql.DB
+	manager ptymgr.SessionManager
 }
 
-func NewWebhooksHandler(db *sql.DB) *WebhooksHandler {
-	return &WebhooksHandler{db: db}
+func NewWebhooksHandler(db *sql.DB, manager ptymgr.SessionManager) *WebhooksHandler {
+	return &WebhooksHandler{db: db, manager: manager}
 }
 
 type webhook struct {
@@ -278,6 +282,70 @@ func (h *WebhooksHandler) FireWebhook(event string, sessionID string, data map[s
 				log.Printf("webhooks: delivery to %s failed: %v", url, err)
 			}
 		}(wh.URL, wh.Secret)
+	}
+
+	go CheckAndFireTriggers(h.db, h.manager, event, sessionID)
+}
+
+// CheckAndFireTriggers queries active triggers and fires any that match the event.
+func CheckAndFireTriggers(db *sql.DB, manager ptymgr.SessionManager, event string, sessionID string) {
+	rows, err := db.Query(`SELECT id, event_pattern, action, config FROM triggers WHERE active = 1`)
+	if err != nil {
+		log.Printf("triggers: query error: %v", err)
+		return
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var id int64
+		var pattern, action, configJSON string
+		if err := rows.Scan(&id, &pattern, &action, &configJSON); err != nil {
+			continue
+		}
+
+		if !matchEventPattern(pattern, event) {
+			continue
+		}
+
+		var config map[string]any
+		json.Unmarshal([]byte(configJSON), &config)
+
+		go executeTriggerAction(db, manager, action, config, sessionID)
+	}
+}
+
+func matchEventPattern(pattern, event string) bool {
+	if pattern == event {
+		return true
+	}
+	if strings.HasSuffix(pattern, "*") {
+		prefix := strings.TrimSuffix(pattern, "*")
+		return strings.HasPrefix(event, prefix)
+	}
+	return false
+}
+
+func executeTriggerAction(db *sql.DB, manager ptymgr.SessionManager, action string, config map[string]any, sessionID string) {
+	switch action {
+	case "send_input":
+		targetID, _ := config["session_id"].(string)
+		if targetID == "" {
+			targetID = sessionID
+		}
+		data, _ := config["data"].(string)
+		if data == "" {
+			return
+		}
+		sess := manager.Get(targetID)
+		if sess != nil {
+			sess.Write([]byte(data))
+		}
+	case "run_workflow":
+		wfID, ok := config["workflow_id"].(float64)
+		if !ok {
+			return
+		}
+		RunWorkflow(db, manager, int64(wfID))
 	}
 }
 

@@ -202,6 +202,45 @@ export const api = {
     request<void>(`/api/webhooks/${id}`, { method: "DELETE" }),
   testWebhook: (id: number) =>
     request<{ ok: boolean }>(`/api/webhooks/${id}/test`, { method: "POST" }),
+
+  // Orchestrator
+  createOrchestrator: () =>
+    request<OrchestratorSession>("/api/orchestrator", { method: "POST" }),
+  stopOrchestrator: () =>
+    request<void>("/api/orchestrator/stop", { method: "POST" }),
+  getOrchestratorSessions: () =>
+    request<SessionSummary[]>("/api/orchestrator/sessions"),
+
+  // Session Input/Tail
+  sendSessionInput: (sessionId: string, data: string) =>
+    request<void>(`/api/sessions/${sessionId}/input`, {
+      method: "POST",
+      body: JSON.stringify({ data }),
+    }),
+  getSessionTail: (sessionId: string, lines = 50) =>
+    request<{ lines: string[] }>(`/api/sessions/${sessionId}/tail?lines=${lines}`),
+
+  // Workflows
+  getWorkflows: () => request<Workflow[]>("/api/workflows"),
+  createWorkflow: (data: { name: string; description: string; steps: WorkflowStep[] }) =>
+    request<Workflow>("/api/workflows", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  deleteWorkflow: (id: number) =>
+    request<void>(`/api/workflows/${id}`, { method: "DELETE" }),
+  runWorkflow: (id: number) =>
+    request<void>(`/api/workflows/${id}/run`, { method: "POST" }),
+
+  // Triggers
+  getTriggers: () => request<Trigger[]>("/api/triggers"),
+  createTrigger: (data: { event_pattern: string; action: string; config: Record<string, unknown>; active?: boolean }) =>
+    request<Trigger>("/api/triggers", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  deleteTrigger: (id: number) =>
+    request<void>(`/api/triggers/${id}`, { method: "DELETE" }),
 };
 
 export interface FileNode {
@@ -236,4 +275,47 @@ export interface MCPServerConfig {
 
 export interface MCPConfig {
   mcpServers: Record<string, MCPServerConfig>;
+}
+
+export interface OrchestratorSession {
+  id: string;
+  status: string;
+  pid: number | null;
+  work_dir: string;
+  created_at: string;
+}
+
+export interface SessionSummary {
+  id: string;
+  repo_owner: string;
+  repo_name: string;
+  branch: string;
+  cli_type: string;
+  status: string;
+  snippet: string;
+  created_at: string;
+}
+
+export interface WorkflowStep {
+  type: "shell" | "send_input";
+  command?: string;
+  session_id?: string;
+  data?: string;
+}
+
+export interface Workflow {
+  id: number;
+  name: string;
+  description: string;
+  steps: WorkflowStep[];
+  created_at: string;
+}
+
+export interface Trigger {
+  id: number;
+  event_pattern: string;
+  action: string;
+  config: Record<string, unknown>;
+  active: boolean;
+  created_at: string;
 }
