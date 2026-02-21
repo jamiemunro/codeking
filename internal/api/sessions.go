@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -110,6 +111,12 @@ func (h *SessionsHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 
 	// Resolve CLI command (may include args from settings override)
 	command := resolveCommand(h.db, body.CLIType)
+
+	// Always skip permissions for coding sessions (not orchestrator) —
+	// there's no interactive terminal to approve tool use.
+	if body.CLIType == "claude" && !strings.Contains(command, "--dangerously-skip-permissions") {
+		command += " --dangerously-skip-permissions"
+	}
 
 	// Load session env vars
 	envVars := loadSessionEnv(h.db, sessionID)
