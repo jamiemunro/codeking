@@ -1,4 +1,4 @@
-# Codeking
+# Forge
 
 Fork of [trezm/superposition](https://github.com/trezm/superposition) (MIT License).
 
@@ -72,7 +72,7 @@ cd web && npx prettier --write "src/**/*.{ts,tsx,css}"
 ## Deployment (Production)
 
 **Server:** Hetzner CX23 (2 vCPU, 4GB), Nuremberg
-**URL:** https://codeking.isolater.app
+**URL:** https://forge.isolater.app
 **IP:** 46.225.118.71
 **SSH:** `ssh root@46.225.118.71`
 
@@ -108,7 +108,7 @@ ssh root@46.225.118.71 'systemctl restart superposition'
 
 # 5. Verify
 ssh root@46.225.118.71 'systemctl is-active superposition'
-curl -s -o /dev/null -w "%{http_code}" https://codeking.isolater.app/  # 401 = OK (behind basic auth)
+curl -s -o /dev/null -w "%{http_code}" https://forge.isolater.app/  # 401 = OK (behind basic auth)
 ```
 
 ### Deploy rules
@@ -129,7 +129,7 @@ If auth expires, use the web terminal at `/terminal/` to re-run `claude auth log
 
 ### DNS
 
-`codeking.isolater.app` → A record on Cloudflare (isolater.app zone), proxy OFF (grey cloud), pointing to 46.225.118.71.
+`forge.isolater.app` → A record on Cloudflare (isolater.app zone), proxy OFF (grey cloud), pointing to 46.225.118.71.
 
 ## Upstream sync
 
@@ -142,5 +142,5 @@ git push origin main
 
 ## Remotes
 
-- `origin` → github.com/jamiemunro/codeking (your fork)
+- `origin` → github.com/jamiemunro/forge (your fork)
 - `upstream` → github.com/trezm/superposition (original)

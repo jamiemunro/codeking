@@ -2,11 +2,11 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 
-const SESSION_ID = process.env.CODEKING_SESSION_ID;
-const API_URL = process.env.CODEKING_API_URL || "http://localhost:8800";
+const SESSION_ID = process.env.FORGE_SESSION_ID;
+const API_URL = process.env.FORGE_API_URL || "http://localhost:8800";
 
 if (!SESSION_ID) {
-  console.error("CODEKING_SESSION_ID is required");
+  console.error("FORGE_SESSION_ID is required");
   process.exit(1);
 }
 
@@ -29,7 +29,7 @@ async function putNotes(content) {
 }
 
 const server = new McpServer({
-  name: "codeking-notepad",
+  name: "forge-notepad",
   version: "1.0.0",
 });
 

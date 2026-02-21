@@ -3,10 +3,10 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import { execSync } from "child_process";
 
-const API_URL = process.env.CODEKING_API_URL || "http://localhost:8800";
+const API_URL = process.env.FORGE_API_URL || "http://localhost:8800";
 
 const server = new McpServer({
-  name: "codeking-orchestrator",
+  name: "forge-orchestrator",
   version: "1.0.0",
 });
 

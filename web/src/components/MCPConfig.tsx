@@ -280,7 +280,7 @@ export default function MCPConfig({ sessionId }: MCPConfigProps) {
 
           {/* Server list */}
           {servers.map(([name, serverConfig]) => {
-            const isBuiltin = name === "codeking-notepad";
+            const isBuiltin = name === "forge-notepad";
             return (
               <div
                 key={name}

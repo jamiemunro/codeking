@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
-import { api, CodekingOfflineError } from "../lib/api";
+import { api, ForgeOfflineError } from "../lib/api";
 
 interface LocalRepo {
   id: number;
@@ -43,7 +43,7 @@ export default function Repositories() {
       setLocalRepos(data);
       pollDelayRef.current = 3_000;
     } catch (e) {
-      if (e instanceof CodekingOfflineError) {
+      if (e instanceof ForgeOfflineError) {
         pollDelayRef.current = 30_000;
       } else {
         console.error(e);

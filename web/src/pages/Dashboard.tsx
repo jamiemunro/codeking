@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { api, CodekingOfflineError } from "../lib/api";
+import { api, ForgeOfflineError } from "../lib/api";
 import OrchestratorTerminal from "../components/OrchestratorTerminal";
 import SessionsOverview from "../components/SessionsOverview";
 import WorkflowManager from "../components/WorkflowManager";
@@ -29,7 +29,7 @@ export default function Dashboard() {
       .health()
       .then(setHealth)
       .catch((e) => {
-        if (e instanceof CodekingOfflineError) {
+        if (e instanceof ForgeOfflineError) {
           setOffline(true);
         }
       });

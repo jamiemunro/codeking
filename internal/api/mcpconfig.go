@@ -12,22 +12,22 @@ import (
 func WriteSessionMCPConfig(sessionID, worktreePath string) {
 	mcpConfig := fmt.Sprintf(`{
   "mcpServers": {
-    "codeking-notepad": {
+    "forge-notepad": {
       "type": "stdio",
       "command": "node",
       "args": ["/opt/superposition/mcp/notepad-server.js"],
       "env": {
-        "CODEKING_SESSION_ID": "%s",
-        "CODEKING_API_URL": "http://localhost:8800"
+        "FORGE_SESSION_ID": "%s",
+        "FORGE_API_URL": "http://localhost:8800"
       }
     },
-    "codeking-ui": {
+    "forge-ui": {
       "type": "stdio",
       "command": "node",
       "args": ["/opt/superposition/mcp/a2ui-server.js"],
       "env": {
-        "CODEKING_SESSION_ID": "%s",
-        "CODEKING_API_URL": "http://localhost:8800"
+        "FORGE_SESSION_ID": "%s",
+        "FORGE_API_URL": "http://localhost:8800"
       }
     }
   }
@@ -42,30 +42,30 @@ func WriteSessionMCPConfig(sessionID, worktreePath string) {
 func WriteOrchestratorMCPConfig(sessionID, workDir string) {
 	mcpConfig := fmt.Sprintf(`{
   "mcpServers": {
-    "codeking-orchestrator": {
+    "forge-orchestrator": {
       "type": "stdio",
       "command": "node",
       "args": ["/opt/superposition/mcp/orchestrator-server.js"],
       "env": {
-        "CODEKING_API_URL": "http://localhost:8800"
+        "FORGE_API_URL": "http://localhost:8800"
       }
     },
-    "codeking-notepad": {
+    "forge-notepad": {
       "type": "stdio",
       "command": "node",
       "args": ["/opt/superposition/mcp/notepad-server.js"],
       "env": {
-        "CODEKING_SESSION_ID": "%s",
-        "CODEKING_API_URL": "http://localhost:8800"
+        "FORGE_SESSION_ID": "%s",
+        "FORGE_API_URL": "http://localhost:8800"
       }
     },
-    "codeking-ui": {
+    "forge-ui": {
       "type": "stdio",
       "command": "node",
       "args": ["/opt/superposition/mcp/a2ui-server.js"],
       "env": {
-        "CODEKING_SESSION_ID": "%s",
-        "CODEKING_API_URL": "http://localhost:8800"
+        "FORGE_SESSION_ID": "%s",
+        "FORGE_API_URL": "http://localhost:8800"
       }
     }
   }

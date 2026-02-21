@@ -202,7 +202,7 @@ export function IdleMonitorProvider({ children }: { children: ReactNode }) {
   // Browser tab title
   useEffect(() => {
     document.title =
-      idleSessions.size > 0 ? "(!) Codeking" : "Codeking";
+      idleSessions.size > 0 ? "(!) Forge" : "Forge";
   }, [idleSessions]);
 
   // OS notifications for idle sessions
@@ -224,7 +224,7 @@ export function IdleMonitorProvider({ children }: { children: ReactNode }) {
 
       navigator.serviceWorker?.ready
         .then((reg) =>
-          reg.showNotification("Codeking", {
+          reg.showNotification("Forge", {
             body: `${label} needs your attention`,
             tag: `idle-${sessionId}`,
             data: { sessionId },

@@ -1,4 +1,4 @@
-# Codeking Roadmap
+# Forge Roadmap
 
 ## Vision
 
@@ -12,7 +12,7 @@ AI development workspace — not just a terminal wrapper. Worktree-isolated Clau
 - [x] Source branch defaults to main/master
 - [ ] Session naming and search
 - [ ] Responsive layout improvements
-- [x] Remove/rebrand Superposition references → Codeking
+- [x] Remove/rebrand Superposition references → Forge
 
 ## Phase 2 — Living document
 
@@ -48,18 +48,18 @@ AI development workspace — not just a terminal wrapper. Worktree-isolated Clau
 
 A persistent "control plane" terminal on the dashboard that manages and coordinates across sessions — modeled on the leader/teammate relationship in Claude Code agent teams.
 
-- [ ] Dashboard terminal: a persistent PTY session tied to the workspace, not a single repo
-- [ ] Orchestrator role: can spawn, monitor, and stop coding sessions from within the terminal
-- [ ] Cross-session awareness: orchestrator can see status/output summaries of all running sessions
-- [ ] Deployment commands: run deploy workflows (build, push, restart) from the orchestrator terminal
-- [ ] Task delegation: send instructions to individual coding sessions (like a team lead assigning work)
-- [ ] Session output tailing: orchestrator can pull recent output from any session without switching tabs
-- [ ] Workflow scripts: user-defined multi-step workflows (e.g. "deploy staging" = build + test + push + restart)
-- [ ] Event-driven triggers: orchestrator reacts to session events (idle, error, completion) and can take action
+- [x] Dashboard terminal: a persistent PTY session tied to the workspace, not a single repo
+- [x] Orchestrator role: can spawn, monitor, and stop coding sessions from within the terminal
+- [x] Cross-session awareness: orchestrator can see status/output summaries of all running sessions
+- [x] Deployment commands: run deploy workflows (build, push, restart) from the orchestrator terminal
+- [x] Task delegation: send instructions to individual coding sessions (like a team lead assigning work)
+- [x] Session output tailing: orchestrator can pull recent output from any session without switching tabs
+- [x] Workflow scripts: user-defined multi-step workflows (e.g. "deploy staging" = build + test + push + restart)
+- [x] Event-driven triggers: orchestrator reacts to session events (idle, error, completion) and can take action
 
 ## Phase 6 — Live Preview & Browser Automation
 
-Embed running apps directly in the Codeking UI. Sessions spawn dev servers, Codeking proxies them, and you see the live product next to the terminal. Combined with headless browser automation, Claude can build, preview, and design-test in a closed loop.
+Embed running apps directly in the Forge UI. Sessions spawn dev servers, Forge proxies them, and you see the live product next to the terminal. Combined with headless browser automation, Claude can build, preview, and design-test in a closed loop.
 
 ### Live Preview
 - [ ] Port proxy: Go backend reverse-proxies session dev server ports via `/preview/{sessionId}/`
@@ -72,7 +72,7 @@ Embed running apps directly in the Codeking UI. Sessions spawn dev servers, Code
 ### Browser Automation
 - [ ] Headless Chrome + Playwright installed on server
 - [ ] MCP tool for Claude sessions to drive the browser (navigate, click, screenshot, assert)
-- [ ] Screenshot streaming: render screenshots inline in the Codeking UI (not just terminal)
+- [ ] Screenshot streaming: render screenshots inline in the Forge UI (not just terminal)
 - [ ] Visual regression: compare screenshots before/after changes, flag differences
 - [ ] Design feedback loop: Claude edits code → HMR reloads → Playwright screenshots → Claude evaluates the result
 

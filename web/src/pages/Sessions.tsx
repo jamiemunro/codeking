@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { api, CodekingOfflineError } from "../lib/api";
+import { api, ForgeOfflineError } from "../lib/api";
 import Terminal from "../components/Terminal";
 import TerminalPreview from "../components/TerminalPreview";
 import NewSessionModal from "../components/NewSessionModal";
@@ -35,7 +35,7 @@ export default function Sessions() {
   const [viewMode, setViewMode] = useState<"tabs" | "grid">("tabs");
   const [showModal, setShowModal] = useState(false);
   const [rightPanel, setRightPanel] = useState<RightPanel>(() => {
-    const saved = localStorage.getItem("codeking:rightPanel");
+    const saved = localStorage.getItem("forge:rightPanel");
     if (saved === "notes" || saved === "files" || saved === "mcp" || saved === "ui") return saved;
     return null;
   });
@@ -46,7 +46,7 @@ export default function Sessions() {
   const togglePanel = useCallback((panel: "notes" | "files" | "mcp" | "ui") => {
     setRightPanel((prev) => {
       const next = prev === panel ? null : panel;
-      localStorage.setItem("codeking:rightPanel", next ?? "");
+      localStorage.setItem("forge:rightPanel", next ?? "");
       return next;
     });
   }, []);
@@ -67,7 +67,7 @@ export default function Sessions() {
       setSessions(data);
       pollDelayRef.current = 5_000;
     } catch (e) {
-      if (e instanceof CodekingOfflineError) {
+      if (e instanceof ForgeOfflineError) {
         pollDelayRef.current = 30_000;
       } else {
         console.error(e);
@@ -425,7 +425,7 @@ export default function Sessions() {
             <div className="h-full">
               {rightPanel ? (
                 <SplitPane
-                  storageKey="codeking:rightPanelSplit"
+                  storageKey="forge:rightPanelSplit"
                   left={
                     <div className="relative h-full">
                       {openTabs.map((id) => (

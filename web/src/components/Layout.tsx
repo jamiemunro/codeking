@@ -54,7 +54,7 @@ export default function Layout() {
           <div className="flex items-start justify-between gap-3">
             <div>
               <h1 className="text-lg font-bold tracking-tight">
-                Codeking
+                Forge
               </h1>
               <p className="text-xs text-zinc-500">AI Development Workspace</p>
             </div>
@@ -138,7 +138,7 @@ export default function Layout() {
           </button>
           <div>
             <h1 className="text-sm font-semibold tracking-wide">
-              Codeking
+              Forge
             </h1>
             <p className="text-[11px] leading-tight text-zinc-500">
               AI Development Workspace
@@ -148,7 +148,7 @@ export default function Layout() {
 
         {connectionStatus === "offline" && (
           <div className="px-4 py-2 bg-amber-600/20 border-b border-amber-700/50 text-amber-300 text-sm text-center">
-            Codeking is offline — your laptop may be asleep or
+            Forge is offline — your laptop may be asleep or
             disconnected.
           </div>
         )}

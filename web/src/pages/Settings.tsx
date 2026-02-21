@@ -124,7 +124,7 @@ function NotificationRequest() {
         <button
           onClick={() =>
             navigator.serviceWorker?.ready.then((reg) =>
-              reg.showNotification("Codeking", {
+              reg.showNotification("Forge", {
                 body: "Test notification",
               }),
             )
