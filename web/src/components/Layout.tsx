@@ -52,11 +52,14 @@ export default function Layout() {
       >
         <div className="p-4 border-b border-zinc-800">
           <div className="flex items-start justify-between gap-3">
-            <div>
-              <h1 className="text-lg font-bold tracking-tight">
-                Forge
-              </h1>
-              <p className="text-xs text-zinc-500">AI Development Workspace</p>
+            <div className="flex items-center gap-2.5">
+              <img src="/logo.svg" alt="Forge" className="w-6 h-6 invert" />
+              <div>
+                <h1 className="text-lg font-bold tracking-tight leading-none">
+                  Forge
+                </h1>
+                <p className="text-xs text-zinc-500">AI Development Workspace</p>
+              </div>
             </div>
             <button
               type="button"
@@ -137,12 +140,17 @@ export default function Layout() {
             </svg>
           </button>
           <div>
-            <h1 className="text-sm font-semibold tracking-wide">
-              Forge
-            </h1>
-            <p className="text-[11px] leading-tight text-zinc-500">
-              AI Development Workspace
-            </p>
+            <div className="flex items-center gap-2">
+              <img src="/logo.svg" alt="Forge" className="w-5 h-5 invert" />
+              <div>
+                <h1 className="text-sm font-semibold tracking-wide leading-none">
+                  Forge
+                </h1>
+                <p className="text-[11px] leading-tight text-zinc-500">
+                  AI Development Workspace
+                </p>
+              </div>
+            </div>
           </div>
         </header>
 
