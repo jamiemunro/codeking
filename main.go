@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -385,6 +386,16 @@ func reconcileOrchestratorSessions(database *sql.DB, mgr ptymgr.SessionManager, 
 			continue
 		}
 		if _, alive := activeSet[id]; alive {
+			// Migrate old orchestrator sessions from $HOME to dedicated dir
+			homeDir, _ := os.UserHomeDir()
+			if workDir == homeDir {
+				newDir := homeDir + "/.superposition/orchestrator"
+				os.MkdirAll(newDir, 0755)
+				database.Exec(`UPDATE orchestrator_sessions SET work_dir = ? WHERE id = ?`, newDir, id)
+				// Remove stale .mcp.json from $HOME
+				os.Remove(filepath.Join(homeDir, ".mcp.json"))
+				workDir = newDir
+			}
 			// Refresh .mcp.json so new MCP tools are available on reconnect
 			if workDir != "" {
 				api.WriteOrchestratorMCPConfig(id, workDir)
