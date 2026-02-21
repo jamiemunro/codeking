@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	neturl "net/url"
 	"time"
 )
 
@@ -24,10 +25,16 @@ func NewWebhooksHandler(db *sql.DB) *WebhooksHandler {
 type webhook struct {
 	ID        int64     `json:"id"`
 	URL       string    `json:"url"`
-	Secret    string    `json:"secret"`
+	Secret    string    `json:"secret,omitempty"`
 	Events    []string  `json:"events"`
 	Active    bool      `json:"active"`
 	CreatedAt time.Time `json:"created_at"`
+}
+
+// redacted returns a copy with the secret omitted from JSON serialization.
+func (wh webhook) redacted() webhook {
+	wh.Secret = ""
+	return wh
 }
 
 func scanWebhook(row interface {
@@ -65,7 +72,7 @@ func (h *WebhooksHandler) HandleList(w http.ResponseWriter, r *http.Request) {
 			WriteError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
-		result = append(result, wh)
+		result = append(result, wh.redacted())
 	}
 	WriteJSON(w, http.StatusOK, result)
 }
@@ -173,7 +180,7 @@ func (h *WebhooksHandler) HandleUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	WriteJSON(w, http.StatusOK, wh)
+	WriteJSON(w, http.StatusOK, wh.redacted())
 }
 
 // HandleDelete deletes a webhook by ID and returns 204.
@@ -208,6 +215,11 @@ func (h *WebhooksHandler) HandleTest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !isAllowedWebhookURL(wh.URL) {
+		WriteError(w, http.StatusBadRequest, "webhook URL must use http or https scheme")
+		return
+	}
+
 	payload := map[string]any{
 		"event":      "webhook.test",
 		"session_id": "",
@@ -239,6 +251,13 @@ func (h *WebhooksHandler) FireWebhook(event string, sessionID string, data map[s
 		"data":       data,
 	}
 
+	// Marshal once before spawning goroutines to avoid shared map access.
+	body, err := json.Marshal(payload)
+	if err != nil {
+		log.Printf("webhooks: marshal error: %v", err)
+		return
+	}
+
 	for rows.Next() {
 		wh, err := scanWebhook(rows)
 		if err != nil {
@@ -255,20 +274,33 @@ func (h *WebhooksHandler) FireWebhook(event string, sessionID string, data map[s
 			continue
 		}
 		go func(url, secret string) {
-			if err := deliverWebhook(url, secret, payload); err != nil {
+			if err := deliverWebhookRaw(url, secret, body); err != nil {
 				log.Printf("webhooks: delivery to %s failed: %v", url, err)
 			}
 		}(wh.URL, wh.Secret)
 	}
 }
 
-// deliverWebhook POSTs the payload to the given URL with an HMAC-SHA256 signature header.
+// isAllowedWebhookURL validates that the URL uses http or https scheme.
+func isAllowedWebhookURL(rawURL string) bool {
+	u, err := neturl.Parse(rawURL)
+	if err != nil {
+		return false
+	}
+	return u.Scheme == "http" || u.Scheme == "https"
+}
+
+// deliverWebhook marshals the payload and delivers it.
 func deliverWebhook(url, secret string, payload map[string]any) error {
 	body, err := json.Marshal(payload)
 	if err != nil {
 		return fmt.Errorf("marshal payload: %w", err)
 	}
+	return deliverWebhookRaw(url, secret, body)
+}
 
+// deliverWebhookRaw POSTs pre-marshaled JSON to the given URL with an HMAC-SHA256 signature header.
+func deliverWebhookRaw(url, secret string, body []byte) error {
 	mac := hmac.New(sha256.New, []byte(secret))
 	mac.Write(body)
 	sig := hex.EncodeToString(mac.Sum(nil))

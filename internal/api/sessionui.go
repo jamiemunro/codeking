@@ -41,6 +41,13 @@ func (h *SessionUIHandler) HandleGet(w http.ResponseWriter, r *http.Request) {
 func (h *SessionUIHandler) HandlePut(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 
+	// Verify the session exists before allowing UI content writes.
+	var exists int
+	if err := h.db.QueryRow(`SELECT 1 FROM sessions WHERE id = ?`, id).Scan(&exists); err != nil {
+		WriteError(w, http.StatusNotFound, "session not found")
+		return
+	}
+
 	var body struct {
 		Content string `json:"content"`
 	}

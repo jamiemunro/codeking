@@ -1,35 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-
-interface Webhook {
-  id: number;
-  url: string;
-  secret: string;
-  events: string[];
-  active: boolean;
-  created_at: string;
-}
-
-const BASE = "";
-const getWebhooks = () =>
-  fetch(`${BASE}/api/webhooks`).then((r) => r.json());
-const createWebhook = (data: Partial<Webhook>) =>
-  fetch(`${BASE}/api/webhooks`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  }).then((r) => r.json());
-const updateWebhook = (id: number, data: Partial<Webhook>) =>
-  fetch(`${BASE}/api/webhooks/${id}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  }).then((r) => r.json());
-const deleteWebhook = (id: number) =>
-  fetch(`${BASE}/api/webhooks/${id}`, { method: "DELETE" });
-const testWebhook = (id: number) =>
-  fetch(`${BASE}/api/webhooks/${id}/test`, { method: "POST" }).then((r) =>
-    r.json(),
-  );
+import { api, type Webhook } from "../lib/api";
 
 const ALL_EVENTS = [
   "session.created",
@@ -59,6 +29,7 @@ function WebhookForm({ initial, isNew, onSave, onCancel }: WebhookFormProps) {
   const [events, setEvents] = useState<string[]>(initial?.events ?? []);
   const [active, setActive] = useState(initial?.active ?? true);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const toggleEvent = (event: string) => {
     setEvents((prev) =>
@@ -69,8 +40,11 @@ function WebhookForm({ initial, isNew, onSave, onCancel }: WebhookFormProps) {
   const handleSubmit = async () => {
     if (!url.trim()) return;
     setSaving(true);
+    setError(null);
     try {
       await onSave({ url: url.trim(), secret, events, active });
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to save");
     } finally {
       setSaving(false);
     }
@@ -144,6 +118,10 @@ function WebhookForm({ initial, isNew, onSave, onCancel }: WebhookFormProps) {
         </label>
       </div>
 
+      {error && (
+        <p className="text-[10px] text-red-400">{error}</p>
+      )}
+
       <div className="flex gap-2 pt-1">
         <button
           onClick={handleSubmit}
@@ -183,8 +161,9 @@ export default function WebhookManager() {
   const loadWebhooks = useCallback(() => {
     setLoading(true);
     setError(null);
-    getWebhooks()
-      .then((data: Webhook[]) => setWebhooks(data))
+    api
+      .getWebhooks()
+      .then((data) => setWebhooks(data))
       .catch((err: unknown) =>
         setError(err instanceof Error ? err.message : "Failed to load"),
       )
@@ -196,14 +175,14 @@ export default function WebhookManager() {
   }, [loadWebhooks]);
 
   const handleCreate = useCallback(async (data: Partial<Webhook>) => {
-    const created = await createWebhook(data);
+    const created = await api.createWebhook(data);
     setWebhooks((prev) => [...prev, created]);
     setShowAddForm(false);
   }, []);
 
   const handleUpdate = useCallback(
     async (id: number, data: Partial<Webhook>) => {
-      const updated = await updateWebhook(id, data);
+      const updated = await api.updateWebhook(id, data);
       setWebhooks((prev) => prev.map((w) => (w.id === id ? updated : w)));
       setEditingId(null);
     },
@@ -211,20 +190,24 @@ export default function WebhookManager() {
   );
 
   const handleDelete = useCallback(async (id: number) => {
-    await deleteWebhook(id);
-    setWebhooks((prev) => prev.filter((w) => w.id !== id));
+    try {
+      await api.deleteWebhook(id);
+      setWebhooks((prev) => prev.filter((w) => w.id !== id));
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Delete failed");
+    }
   }, []);
 
   const handleTest = useCallback(async (id: number) => {
     setTesting((prev) => ({ ...prev, [id]: true }));
     try {
-      const result = await testWebhook(id);
+      await api.testWebhook(id);
       setTestResults((prev) => ({
         ...prev,
         [id]: {
           webhookId: id,
-          success: result.success ?? true,
-          message: result.message ?? "Test sent successfully",
+          success: true,
+          message: "Test sent successfully",
         },
       }));
     } catch (err: unknown) {

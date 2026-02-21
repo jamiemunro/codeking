@@ -185,6 +185,23 @@ export const api = {
       method: "PUT",
       body: JSON.stringify(env),
     }),
+
+  // Webhooks
+  getWebhooks: () => request<Webhook[]>("/api/webhooks"),
+  createWebhook: (data: Partial<Webhook>) =>
+    request<Webhook>("/api/webhooks", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  updateWebhook: (id: number, data: Partial<Webhook>) =>
+    request<Webhook>(`/api/webhooks/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+  deleteWebhook: (id: number) =>
+    request<void>(`/api/webhooks/${id}`, { method: "DELETE" }),
+  testWebhook: (id: number) =>
+    request<{ ok: boolean }>(`/api/webhooks/${id}/test`, { method: "POST" }),
 };
 
 export interface FileNode {
@@ -199,6 +216,15 @@ export interface FileEntry {
   path: string;
   is_dir: boolean;
   size: number;
+}
+
+export interface Webhook {
+  id: number;
+  url: string;
+  secret?: string;
+  events: string[];
+  active: boolean;
+  created_at: string;
 }
 
 export interface MCPServerConfig {

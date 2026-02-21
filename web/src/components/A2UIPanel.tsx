@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, type ReactNode } from "react";
 
 interface A2UIPanelProps {
   sessionId: string;
@@ -28,50 +28,69 @@ interface UIState {
 const fetchUI = (sessionId: string) =>
   fetch(`/api/sessions/${sessionId}/ui`).then((r) => r.json() as Promise<UIState>);
 
-function parseInlineText(text: string): string {
-  return text
-    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-    .replace(/\*(.+?)\*/g, "<em>$1</em>")
-    .replace(
-      /\[([^\]]+)\]\(([^)]+)\)/g,
-      '<a href="$2" target="_blank" rel="noopener" class="text-blue-400 hover:underline">$1</a>',
-    );
+function parseInlineText(text: string): ReactNode[] {
+  const parts: ReactNode[] = [];
+  // Split on markdown patterns and build safe React elements
+  const regex = /(\*\*(.+?)\*\*|\*(.+?)\*|\[([^\]]+)\]\(([^)]+)\))/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  let key = 0;
+
+  while ((match = regex.exec(text)) !== null) {
+    // Add text before this match
+    if (match.index > lastIndex) {
+      parts.push(text.slice(lastIndex, match.index));
+    }
+
+    if (match[2]) {
+      // **bold**
+      parts.push(<strong key={key++}>{match[2]}</strong>);
+    } else if (match[3]) {
+      // *italic*
+      parts.push(<em key={key++}>{match[3]}</em>);
+    } else if (match[4] && match[5]) {
+      // [text](url) — only allow http/https
+      const href = match[5];
+      const isSafe = href.startsWith("http://") || href.startsWith("https://");
+      if (isSafe) {
+        parts.push(
+          <a key={key++} href={href} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">
+            {match[4]}
+          </a>
+        );
+      } else {
+        parts.push(match[4]);
+      }
+    }
+    lastIndex = match.index + match[0].length;
+  }
+
+  // Add remaining text
+  if (lastIndex < text.length) {
+    parts.push(text.slice(lastIndex));
+  }
+
+  return parts.length > 0 ? parts : [text];
 }
 
 function RenderElement({ element }: { element: UIElement }): React.ReactElement {
   switch (element.type) {
     case "heading": {
-      const parsed = parseInlineText(element.text);
+      const content = parseInlineText(element.text);
       if (element.level === 1) {
-        return (
-          <h1
-            className="text-lg font-bold text-zinc-100 mb-3"
-            dangerouslySetInnerHTML={{ __html: parsed }}
-          />
-        );
+        return <h1 className="text-lg font-bold text-zinc-100 mb-3">{content}</h1>;
       }
       if (element.level === 2) {
-        return (
-          <h2
-            className="text-base font-semibold text-zinc-200 mb-3"
-            dangerouslySetInnerHTML={{ __html: parsed }}
-          />
-        );
+        return <h2 className="text-base font-semibold text-zinc-200 mb-3">{content}</h2>;
       }
-      return (
-        <h3
-          className="text-sm font-medium text-zinc-300 mb-3"
-          dangerouslySetInnerHTML={{ __html: parsed }}
-        />
-      );
+      return <h3 className="text-sm font-medium text-zinc-300 mb-3">{content}</h3>;
     }
 
     case "text":
       return (
-        <p
-          className="text-sm text-zinc-400 leading-relaxed mb-3"
-          dangerouslySetInnerHTML={{ __html: parseInlineText(element.content) }}
-        />
+        <p className="text-sm text-zinc-400 leading-relaxed mb-3">
+          {parseInlineText(element.content)}
+        </p>
       );
 
     case "code":
@@ -126,19 +145,13 @@ function RenderElement({ element }: { element: UIElement }): React.ReactElement 
       return element.ordered ? (
         <ol className="text-sm text-zinc-400 space-y-1 list-decimal list-inside mb-3">
           {element.items.map((item, i) => (
-            <li
-              key={i}
-              dangerouslySetInnerHTML={{ __html: parseInlineText(item) }}
-            />
+            <li key={i}>{parseInlineText(item)}</li>
           ))}
         </ol>
       ) : (
         <ul className="text-sm text-zinc-400 space-y-1 list-disc list-inside mb-3">
           {element.items.map((item, i) => (
-            <li
-              key={i}
-              dangerouslySetInnerHTML={{ __html: parseInlineText(item) }}
-            />
+            <li key={i}>{parseInlineText(item)}</li>
           ))}
         </ul>
       );
@@ -282,7 +295,7 @@ export default function A2UIPanel({ sessionId }: A2UIPanelProps) {
             </pre>
           )}
         </div>
-      ) : !uiContent || uiContent.elements.length === 0 ? (
+      ) : !uiContent || !uiContent.elements || uiContent.elements.length === 0 ? (
         <div className="flex-1 flex items-center justify-center p-6">
           <p className="text-xs text-zinc-600 text-center">
             No UI content yet. Claude can push structured displays here using
