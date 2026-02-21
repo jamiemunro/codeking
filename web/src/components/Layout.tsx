@@ -2,6 +2,26 @@ import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { useConnectionStatus } from "../hooks/useConnectionStatus";
 
+function ForgeLogo({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 128 128" fill="none" className={className}>
+      <line x1="64" y1="64" x2="64" y2="26" stroke="currentColor" strokeWidth="4.5" strokeLinecap="round"/>
+      <line x1="64" y1="64" x2="96.9" y2="45" stroke="currentColor" strokeWidth="4.5" strokeLinecap="round"/>
+      <line x1="64" y1="64" x2="96.9" y2="83" stroke="currentColor" strokeWidth="4.5" strokeLinecap="round"/>
+      <line x1="64" y1="64" x2="64" y2="102" stroke="currentColor" strokeWidth="4.5" strokeLinecap="round"/>
+      <line x1="64" y1="64" x2="31.1" y2="83" stroke="currentColor" strokeWidth="4.5" strokeLinecap="round"/>
+      <line x1="64" y1="64" x2="31.1" y2="45" stroke="currentColor" strokeWidth="4.5" strokeLinecap="round"/>
+      <circle cx="64" cy="64" r="12" fill="currentColor"/>
+      <circle cx="64" cy="26" r="8" fill="none" stroke="currentColor" strokeWidth="3.5"/>
+      <circle cx="96.9" cy="45" r="8" fill="none" stroke="currentColor" strokeWidth="3.5"/>
+      <circle cx="96.9" cy="83" r="8" fill="none" stroke="currentColor" strokeWidth="3.5"/>
+      <circle cx="64" cy="102" r="8" fill="none" stroke="currentColor" strokeWidth="3.5"/>
+      <circle cx="31.1" cy="83" r="8" fill="none" stroke="currentColor" strokeWidth="3.5"/>
+      <circle cx="31.1" cy="45" r="8" fill="none" stroke="currentColor" strokeWidth="3.5"/>
+    </svg>
+  );
+}
+
 const navItems = [
   {
     to: "/",
@@ -53,7 +73,7 @@ export default function Layout() {
         <div className="p-4 border-b border-zinc-800">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-2.5">
-              <img src="/logo.svg" alt="Forge" className="w-6 h-6 invert" />
+              <ForgeLogo className="w-6 h-6 text-zinc-100" />
               <div>
                 <h1 className="text-lg font-bold tracking-tight leading-none">
                   Forge
@@ -141,7 +161,7 @@ export default function Layout() {
           </button>
           <div>
             <div className="flex items-center gap-2">
-              <img src="/logo.svg" alt="Forge" className="w-5 h-5 invert" />
+              <ForgeLogo className="w-5 h-5 text-zinc-100" />
               <div>
                 <h1 className="text-sm font-semibold tracking-wide leading-none">
                   Forge
