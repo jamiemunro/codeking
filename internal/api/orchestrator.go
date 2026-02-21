@@ -6,7 +6,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -67,40 +66,7 @@ func (h *OrchestratorHandler) HandleCreate(w http.ResponseWriter, r *http.Reques
 	}
 
 	// Write .mcp.json into the orchestrator's working directory.
-	mcpConfig := fmt.Sprintf(`{
-  "mcpServers": {
-    "codeking-orchestrator": {
-      "type": "stdio",
-      "command": "node",
-      "args": ["/opt/superposition/mcp/orchestrator-server.js"],
-      "env": {
-        "CODEKING_API_URL": "http://localhost:8800"
-      }
-    },
-    "codeking-notepad": {
-      "type": "stdio",
-      "command": "node",
-      "args": ["/opt/superposition/mcp/notepad-server.js"],
-      "env": {
-        "CODEKING_SESSION_ID": "%s",
-        "CODEKING_API_URL": "http://localhost:8800"
-      }
-    },
-    "codeking-ui": {
-      "type": "stdio",
-      "command": "node",
-      "args": ["/opt/superposition/mcp/a2ui-server.js"],
-      "env": {
-        "CODEKING_SESSION_ID": "%s",
-        "CODEKING_API_URL": "http://localhost:8800"
-      }
-    }
-  }
-}`, sessionID, sessionID)
-
-	if err := os.WriteFile(filepath.Join(workDir, ".mcp.json"), []byte(mcpConfig), 0644); err != nil {
-		log.Printf("orchestrator: failed to write .mcp.json for session %s: %v", sessionID, err)
-	}
+	WriteOrchestratorMCPConfig(sessionID, workDir)
 
 	command := resolveCommand(h.db, "claude")
 

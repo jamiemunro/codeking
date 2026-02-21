@@ -16,6 +16,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/peterje/superposition/internal/api"
 	"github.com/peterje/superposition/internal/db"
 	"github.com/peterje/superposition/internal/gateway"
 	gitops "github.com/peterje/superposition/internal/git"
@@ -261,24 +262,28 @@ func reconcileSessions(database *sql.DB, mgr ptymgr.SessionManager, client *shep
 	}
 
 	// Get all running sessions from DB
-	rows, err := database.Query(`SELECT id FROM sessions WHERE status IN ('running', 'starting')`)
+	rows, err := database.Query(`SELECT id, worktree_path FROM sessions WHERE status IN ('running', 'starting')`)
 	if err != nil {
 		log.Printf("Failed to query sessions: %v", err)
 		return
 	}
 	defer rows.Close()
 
+	type sessionInfo struct {
+		id           string
+		worktreePath string
+	}
 	var orphanIDs []string
-	var aliveIDs []string
+	var alive []sessionInfo
 	for rows.Next() {
-		var id string
-		if err := rows.Scan(&id); err != nil {
+		var si sessionInfo
+		if err := rows.Scan(&si.id, &si.worktreePath); err != nil {
 			continue
 		}
-		if _, alive := activeSet[id]; alive {
-			aliveIDs = append(aliveIDs, id)
+		if _, ok := activeSet[si.id]; ok {
+			alive = append(alive, si)
 		} else {
-			orphanIDs = append(orphanIDs, id)
+			orphanIDs = append(orphanIDs, si.id)
 		}
 	}
 
@@ -290,9 +295,13 @@ func reconcileSessions(database *sql.DB, mgr ptymgr.SessionManager, client *shep
 		log.Printf("Marked %d orphaned sessions as stopped", len(orphanIDs))
 	}
 
-	// Re-adopt alive sessions: register done channels so we get exit notifications
-	for _, id := range aliveIDs {
-		sessionID := id
+	// Re-adopt alive sessions: refresh MCP config, register done channels
+	for _, si := range alive {
+		sessionID := si.id
+		// Refresh .mcp.json so new MCP tools are available on reconnect
+		if si.worktreePath != "" {
+			api.WriteSessionMCPConfig(sessionID, si.worktreePath)
+		}
 		// Register the session in the client's done tracking
 		_ = client.Get(sessionID)
 		// Monitor for exit
@@ -302,8 +311,8 @@ func reconcileSessions(database *sql.DB, mgr ptymgr.SessionManager, client *shep
 			log.Printf("Session %s stopped (detected via shepherd)", sessionID)
 		}()
 	}
-	if len(aliveIDs) > 0 {
-		log.Printf("Re-adopted %d sessions from shepherd", len(aliveIDs))
+	if len(alive) > 0 {
+		log.Printf("Re-adopted %d sessions from shepherd", len(alive))
 	}
 
 	// Clean up worktrees for stopped sessions
@@ -364,18 +373,22 @@ func reconcileOrchestratorSessions(database *sql.DB, mgr ptymgr.SessionManager, 
 		activeSet[id] = struct{}{}
 	}
 
-	rows, err := database.Query(`SELECT id FROM orchestrator_sessions WHERE status = 'running'`)
+	rows, err := database.Query(`SELECT id, work_dir FROM orchestrator_sessions WHERE status = 'running'`)
 	if err != nil {
 		return
 	}
 	defer rows.Close()
 
 	for rows.Next() {
-		var id string
-		if err := rows.Scan(&id); err != nil {
+		var id, workDir string
+		if err := rows.Scan(&id, &workDir); err != nil {
 			continue
 		}
 		if _, alive := activeSet[id]; alive {
+			// Refresh .mcp.json so new MCP tools are available on reconnect
+			if workDir != "" {
+				api.WriteOrchestratorMCPConfig(id, workDir)
+			}
 			// Re-adopt: register done channel
 			_ = client.Get(id)
 			go func(sessionID string) {

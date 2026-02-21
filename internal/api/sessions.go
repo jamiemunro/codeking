@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"path/filepath"
 	"strconv"
 	"time"
@@ -107,31 +106,7 @@ func (h *SessionsHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Write .mcp.json for Claude Code MCP integrations
-	mcpConfig := fmt.Sprintf(`{
-  "mcpServers": {
-    "codeking-notepad": {
-      "type": "stdio",
-      "command": "node",
-      "args": ["/opt/superposition/mcp/notepad-server.js"],
-      "env": {
-        "CODEKING_SESSION_ID": "%s",
-        "CODEKING_API_URL": "http://localhost:8800"
-      }
-    },
-    "codeking-ui": {
-      "type": "stdio",
-      "command": "node",
-      "args": ["/opt/superposition/mcp/a2ui-server.js"],
-      "env": {
-        "CODEKING_SESSION_ID": "%s",
-        "CODEKING_API_URL": "http://localhost:8800"
-      }
-    }
-  }
-}`, sessionID, sessionID)
-	if err := os.WriteFile(filepath.Join(worktreePath, ".mcp.json"), []byte(mcpConfig), 0644); err != nil {
-		log.Printf("Failed to write .mcp.json for session %s: %v", sessionID, err)
-	}
+	WriteSessionMCPConfig(sessionID, worktreePath)
 
 	// Resolve CLI command (may include args from settings override)
 	command := resolveCommand(h.db, body.CLIType)
