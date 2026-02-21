@@ -59,9 +59,14 @@ func (h *OrchestratorHandler) HandleCreate(w http.ResponseWriter, r *http.Reques
 	// Create a new orchestrator session.
 	sessionID := uuid.New().String()[:8]
 
-	workDir, err := os.UserHomeDir()
+	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		WriteError(w, http.StatusInternalServerError, fmt.Sprintf("get home dir: %v", err))
+		return
+	}
+	workDir := homeDir + "/.superposition/orchestrator"
+	if err := os.MkdirAll(workDir, 0755); err != nil {
+		WriteError(w, http.StatusInternalServerError, fmt.Sprintf("create orchestrator dir: %v", err))
 		return
 	}
 
